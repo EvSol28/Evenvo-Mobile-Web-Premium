@@ -1,0 +1,20 @@
+---
+format_version: '8'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+workflows:
+  ios-workflow:
+    steps:
+      - flutter-installer:
+          inputs:
+            - __INPUT_GOES_HERE__: stable
+      - activate-ssh-key@4: {}
+      - git-clone@6: {}
+      - flutter-analyze@0: {}
+      - flutter-test@0: {}
+      - flutter-build@0:
+          inputs:
+            - platform: ios
+            - build_mode: debug
+            - ios_export_method: ad-hoc
+      - deploy-to-bitrise-io@1: {}
