@@ -26,7 +26,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.x' # Vérifie ta version dans pubspec.yaml
+          flutter-version: '2.19.0' # Compatible avec ton pubspec.yaml
           channel: 'stable'
 
       - name: Install Flutter dependencies
@@ -38,16 +38,16 @@ jobs:
 
       - name: Build iOS with debug
         run: |
-          flutter doctor -v  # Vérifie la configuration Flutter
-          ls -la ios/       # Vérifie que le dossier ios/ existe
+          flutter doctor -v
+          ls -la ios/
           flutter build ios --release --no-codesign || echo "Build failed, check logs above"
 
       - name: Check build output
-        run: ls -la build/ios/iphoneos/ || echo "Directory not found"
+        run: ls -la build/ios/ || echo "Directory not found"
 
       - name: Archive build
         uses: actions/upload-artifact@v3
         with:
           name: ios-build
-          path: build/ios/iphoneos/
-        continue-on-error: true # Continue même si ça échoue
+          path: build/ios/
+        continue-on-error: true
