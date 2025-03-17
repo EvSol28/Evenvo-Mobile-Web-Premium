@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Définir la version minimale d'iOS
 platform :ios, '13.0'
 
@@ -22,3 +23,21 @@ post_install do |installer|
     end
   end
 end
+=======
+workflows:
+  ios-workflow:
+    name: Workflow iOS
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+    scripts:
+      - name: Installer les dépendances
+        script: |
+          flutter pub get
+      - name: Construire l'application iOS
+        script: |
+          flutter build ios --debug --no-codesign
+    artifacts:
+      - build/ios/ipa
+>>>>>>> 672c5006ebd3454211b950e52e1c62ff08838182
