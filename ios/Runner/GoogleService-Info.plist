@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>MinimumOSVersion</key>
-    <string>13.0</string>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>API_KEY</key>
 	<string>AIzaSyBMvqsU-zA_fycER7-pgM2kcP2fai4_vsM</string>
 	<key>GCM_SENDER_ID</key>
