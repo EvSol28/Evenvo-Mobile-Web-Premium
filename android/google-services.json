@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "669049175529",
+    "project_id": "nocevent-20791",
+    "storage_bucket": "nocevent-20791.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:669049175529:android:ca65bc5f19eebf5198df78",
+        "android_client_info": {
+          "package_name": "com.example.evenvo_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnk5lvU3hXd_5M8d8qTyw7bNzDdD-7eN8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,44 @@
+name: Evenvo_Mobile
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.17.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cloud_firestore: ^5.4.4        # Dernière version compatible
+  firebase_core: ^3.6.0          # Dernière version stable
+  firebase_auth: ^5.3.1          # Dernière version stable
+  firebase_messaging: ^15.2.0    # Version compatible avec firebase_core ^3.x.x
+  qr_code_scanner: ^1.0.1
+  cupertino_icons: ^1.0.8
+  permission_handler: ^11.3.1
+  intl: ^0.18.0
+  http: ^1.2.2
+  google_fonts: ^6.1.0
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.jpg
+    - assets/logo.png
+    - assets/female_avatar.png
+    - assets/male_avatar.png
+    - assets/LogoClient.png
+    - assets/background_illustration.png
+    
+  fonts:
+    - family: CenturyGothic
+      fonts:
+        - asset: assets/fonts/centurygothic.ttf
