@@ -11,7 +11,7 @@ target 'Runner' do
   # Ajouter manuellement les dépendances Firebase
   pod 'Firebase/Core'
   pod 'Firebase/Firestore'
-  # Ajoute d'autres pods si tu utilises d'autres services Firebase (par exemple, Firebase/Auth, Firebase/Analytics)
+  # Ajoute d'autres pods si nécessaire
 end
 
 # Post-installation pour ajuster les configurations
