@@ -10,11 +10,11 @@ workflows:
       - flutter pub get
       - cd ios && pod install
       - flutter build ios --release --no-codesign  # Construit l’application sans signature
-      - xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -archivePath build/ios/archive/Runner.xcarchive archive  # Crée l’archive
+      - xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO archive -archivePath build/ios/archive/Runner.xcarchive  # Archive sans signature
       - xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportOptionsPlist ios/exportOptions.plist -exportPath build/ios/ipa  # Exporte en IPA
     artifacts:
       - build/ios/ipa/*.ipa  # Récupère l’IPA
     publishing:
       email:
         recipients:
-          - evenvo.code@gmail.com  # Remplacez par votre email pour recevoir l'IPA
+          - evenvo.code@gmail.com  # Votre email pour recevoir l’IPA
