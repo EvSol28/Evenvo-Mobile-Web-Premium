@@ -11,8 +11,4 @@ workflows:
       - cd ios && pod install
       - flutter build ipa --release --no-codesign --export-method ad-hoc  # Construit et exporte un IPA non signé
     artifacts:
-      - build/ios/ipa/*.ipa  # Récupère l’IPA
-    publishing:
-      email:
-        recipients:
-          - evenvo.code@gmail.com  # Votre email pour recevoir l’IPA
+      - build/ios/ipa/*.ipa  # Récupère l’IPA dans les Artifacts
