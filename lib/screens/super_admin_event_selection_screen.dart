@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:Evenvo_Mobile/screens/super_admin_scan_screen.dart';
+import 'super_admin_scan_screen.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 

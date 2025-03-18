@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
-import 'package:Evenvo_Mobile/screens/authentification_super_admin_screen.dart'; // Importez l'écran Super Admin
+import 'authentification_super_admin_screen.dart'; // Importez l'écran Super Admin
 
 class AuthentificationChoixScreen extends StatefulWidget {
   @override

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:Evenvo_Mobile/screens/user_profile_screen.dart';
-import 'package:Evenvo_Mobile/screens/authentication_screen.dart';
+import 'user_profile_screen.dart';
+import 'authentication_screen.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 

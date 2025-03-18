@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
-import 'package:Evenvo_Mobile/screens/event_selection_screen.dart';
+import 'event_selection_screen.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
