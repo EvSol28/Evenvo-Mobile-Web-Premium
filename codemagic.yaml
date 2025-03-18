@@ -4,15 +4,13 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - flutter clean
-      - flutter pub get
-      - |
-        if [ -f android/gradlew ]; then
-          cd android && chmod +x gradlew && ./gradlew clean
-          echo "Gradle clean executed successfully"
-        else
-          echo "gradlew not found, skipping Gradle clean"
-        fi
-      - flutter build apk --release --no-codesign  # Génère un APK non signé
+      - name: "Get dependencies"
+        script: flutter pub get
+      - name: "Clean project"
+        script: flutter clean
+      - name: "Build APK"
+        script: flutter build apk --release
+      - name: "Echo success"
+        script: echo "APK created successfully"
     artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk  # Chemin de l'APK
+      - build/app/outputs/flutter-apk/*.apk
