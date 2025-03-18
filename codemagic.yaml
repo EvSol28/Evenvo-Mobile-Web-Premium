@@ -5,6 +5,28 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
+    scripts:
+      - name: Installer les dépendances Flutter
+        script: |
+          flutter pub get
+      - name: Installer les pods iOS
+        script: |
+          cd ios
+          pod install
+      - name: Construire l’application iOS (non signé)
+        script: |
+          flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+
+
+<!--workflows:
+  ios-workflow:
+    name: WORKFLOW_IOS
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
       vars:
         BUNDLE_ID: "com.evenvo.mobile" # Remplace par l’identifiant de ton app
         APP_NAME: "EvenvoMobile" # Remplace par le nom de ton app
@@ -24,5 +46,5 @@ workflows:
           cd ios
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Release archive -archivePath build/Runner.xcarchive
           xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportOptionsPlist exportOptions.plist -exportPath build/Runner.ipa
-    artifacts:
+    artifacts: -->
       - build/Runner.ipa/*.ipa
