@@ -1,23 +1,22 @@
 workflows:
   ios-workflow:
-    name: Workflow iOS
-    max_build_duration: 60
+    name: iOS Build
     environment:
       flutter: stable
       xcode: latest
+      cocoapods: default
     scripts:
-      - name: Installer les dépendances Flutter
+      - name: Get Flutter dependencies
+        script: flutter pub get
+      - name: Install CocoaPods
         script: |
-          flutter pub get
-      - name: Installer les pods iOS
+          cd ios && pod install
+      - name: Build IPA
         script: |
-          cd ios
-          pod install --repo-update
-      - name: Construire l'application iOS
-        script: |
-          flutter build ios --release --no-codesign
-          cd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release archive -archivePath build/Runner.xcarchive
-          xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportOptionsPlist exportOptions.plist -exportPath build/output
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
     artifacts:
-      - build/output/*.ipa
+      - build/ios/ipa/*.ipa
+    publishing:
+      email:
+        recipients:
+          - evenvo.code@gmail.com  # Remplacez par votre email pour recevoir l'IPA
