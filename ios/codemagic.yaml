@@ -1,18 +1,16 @@
 workflows:
   ios-workflow:
-    name: iOS Build
+    name: Workflow iOS
+    max_build_duration: 60
     environment:
       flutter: stable
+      xcode: latest
     scripts:
-      - name: "Step 1 - Get dependencies"
-        script: flutter pub get
-      - name: "Step 2 - Clean project"
-        script: flutter clean
-      - name: "Step 3 - Build iOS"
-        script: flutter build ios --release
-      - name: "Step 4 - Echo success"
-        script: echo "Build completed successfully"
-      - name: "Step 5 - Additional step"
-        script: echo "Step 5 done"
+      - name: Installer les dépendances
+        script: |
+          flutter pub get
+      - name: Construire l'application iOS
+        script: |
+          flutter build ios --debug --no-codesign
     artifacts:
-      - build/ios/iphoneos/*.ipa
+      - build/ios/ipa

@@ -1,51 +1,24 @@
-# Uncomment this line to define a global platform for your project
+# Définir la version minimale d'iOS
 platform :ios, '13.0'
 
-# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
-ENV['COCOAPODS_DISABLE_STATS'] = 'true'
-
-# Suppress warning about unused master specs repo
-warn_for_unused_master_specs_repo => false
-
-# Define the Flutter root
-def flutter_root
-  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
-  unless File.exist?(generated_xcode_build_settings_path)
-    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
-  end
-  File.foreach(generated_xcode_build_settings_path) do |line|
-    matches = line.match(/FLUTTER_ROOT=(.*)/)
-    return matches[1].strip if matches
-  end
-  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
-end
-
-# Load Flutter's pod helper
-require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+# Utiliser une installation standard de CocoaPods
+install! 'cocoapods'
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  # Add Firebase pods
+  # Ajouter manuellement les dépendances Firebase
   pod 'Firebase/Core'
   pod 'Firebase/Firestore'
-  pod 'Firebase/Auth'
-  pod 'Firebase/Messaging'
-
-  # Install all Flutter pods
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  # Ajouter d'autres pods si nécessaire
 end
 
+# Post-installation pour ajuster les configurations
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
-      # Ensure weak references are enabled
-      config.build_settings['CLANG_ENABLE_OBJC_WEAK'] = 'YES'
-      # Add inherited preprocessor definitions
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
     end
   end
 end
