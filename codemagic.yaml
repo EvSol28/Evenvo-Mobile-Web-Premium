@@ -3,7 +3,6 @@ workflows:
     name: Android Build
     environment:
       flutter: stable
-      android_sdk: latest
     scripts:
       - flutter clean
       - flutter pub get
