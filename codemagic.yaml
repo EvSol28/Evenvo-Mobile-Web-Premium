@@ -9,6 +9,8 @@ workflows:
       - flutter clean
       - flutter pub get
       - cd ios && pod install
+      - echo "Configuring Xcode build settings"
+      - sed -i '' 's/INCLUDED_INHERITED=NO/INCLUDED_INHERITED=YES/' ios/Flutter/Release.xcconfig
       - echo "Starting IPA build"
       - flutter build ios --no-codesign --release
       - echo "IPA build completed"
