@@ -9,10 +9,11 @@ workflows:
       - flutter clean
       - flutter pub get
       - cd ios && pod install
-      - flutter build ipa --release --no-codesign --export-method development
+      - flutter build ios --release --no-codesign  # Construit l’application sans signature
+      - xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -archivePath build/ios/archive/Runner.xcarchive archive  # Crée l’archive
+      - xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportOptionsPlist ios/exportOptions.plist -exportPath build/ios/ipa  # Exporte en IPA
     artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive  # Inclut l’archive si besoin
+      - build/ios/ipa/*.ipa  # Récupère l’IPA
     publishing:
       email:
         recipients:
