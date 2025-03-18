@@ -2,7 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>method</key>
-  <string>development</string>
+    <key>method</key>
+    <string>development</string> <!-- ou "app-store" si tu veux publier -->
+    <!--<key>teamID</key>
+    <string>YOUR_TEAM_ID</string> <!-- Remplace par ton Team ID Apple Developer -->-->
+    <key>uploadBitcode</key>
+    <false/>
+    <key>compileBitcode</key>
+    <false/>
+    <key>uploadSymbols</key>
+    <true/>
 </dict>
 </plist>
