@@ -9,11 +9,9 @@ workflows:
       - name: Get Flutter dependencies
         script: flutter pub get
       - name: Install CocoaPods
-        script: |
-          cd ios && pod install
-      - name: Build IPA
-        script: |
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+        script: cd ios && pod install
+      - name: Build IPA without signing
+        script: flutter build ipa --release --no-codesign
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
