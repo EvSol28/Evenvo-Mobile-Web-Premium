@@ -9,6 +9,6 @@ workflows:
       - flutter clean
       - flutter pub get
       - cd ios && pod install
-      - flutter build ipa --release --no-codesign --export-method ad-hoc  # Construit et exporte un IPA non signé
+      - flutter build ipa --release --no-codesign --export-method ad-hoc
     artifacts:
-      - build/ios/ipa/*.ipa  # Récupère l’IPA dans les Artifacts
+      - build/ios/ipa/*.ipa
