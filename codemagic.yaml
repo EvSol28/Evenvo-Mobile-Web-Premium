@@ -6,8 +6,13 @@ workflows:
     scripts:
       - flutter clean
       - flutter pub get
-      - cd android && chmod +x gradlew  # Rend gradlew exécutable
-      - cd android && ./gradlew clean  # Nettoie le projet Android
+      - |
+        if [ -f android/gradlew ]; then
+          cd android && chmod +x gradlew && ./gradlew clean
+          echo "Gradle clean executed successfully"
+        else
+          echo "gradlew not found, skipping Gradle clean"
+        fi
       - flutter build apk --release --no-codesign  # Génère un APK non signé
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk  # Chemin de l'APK
