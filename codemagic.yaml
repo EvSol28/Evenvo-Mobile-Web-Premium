@@ -6,12 +6,10 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
-      - echo "Step 1: Starting flutter clean"
       - flutter clean
-      - echo "Step 2: Starting flutter pub get"
       - flutter pub get
-      - echo "Step 3: Starting pod install"
       - cd ios && pod install
+      - echo "Step 3: Starting pod install"
       - echo "Step 4: Starting IPA build"
       - flutter build ios --no-codesign --release
       - echo "Step 5: IPA build completed"
