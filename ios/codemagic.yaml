@@ -3,15 +3,16 @@ workflows:
     name: iOS Build
     environment:
       flutter: stable
-      xcode: latest
-      cocoapods: default
     scripts:
-      - flutter clean
-      - flutter pub get
-      - cd ios && pod install
-      - echo "Step 3: Starting pod install"
-      - echo "Step 4: Starting IPA build"
-      - flutter build ios --no-codesign --release
-      - echo "Step 5: IPA build completed"
+      - name: "Step 1 - Get dependencies"
+        script: flutter pub get
+      - name: "Step 2 - Clean project"
+        script: flutter clean
+      - name: "Step 3 - Build iOS"
+        script: flutter build ios --release
+      - name: "Step 4 - Echo success"
+        script: echo "Build completed successfully"
+      - name: "Step 5 - Additional step"
+        script: echo "Step 5 done"
     artifacts:
       - build/ios/iphoneos/*.ipa
