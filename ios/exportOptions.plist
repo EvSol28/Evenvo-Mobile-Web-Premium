@@ -5,7 +5,7 @@
     <key>method</key>
     <string>development</string> <!-- ou "app-store" si tu veux publier -->
     <!--<key>teamID</key>
-    <string>YOUR_TEAM_ID</string> <!-- Remplace par ton Team ID Apple Developer -->-->
+    <string>YOUR_TEAM_ID</string> Remplace par ton Team ID Apple Developer -->
     <key>uploadBitcode</key>
     <false/>
     <key>compileBitcode</key>
