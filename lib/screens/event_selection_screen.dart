@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:Evenvo_Mobile/screens/user_profile_screen.dart';
+import 'package:Evenvo_Mobile/screens/access_code_screen.dart';
 import 'package:Evenvo_Mobile/screens/authentication_screen.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
@@ -34,6 +34,36 @@ class _EventSelectionScreenState extends State<EventSelectionScreen>
     super.dispose();
   }
 
+  // Transition moderne avec fondu et mise à l'échelle
+  Route _createModernRoute(Widget destination) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => destination,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const beginScale = 0.95; // Légère réduction initiale
+        const endScale = 1.0; // Taille normale
+        const curve = Curves.easeInOut;
+
+        // Animation de mise à l'échelle
+        var scaleTween = Tween<double>(begin: beginScale, end: endScale).chain(CurveTween(curve: curve));
+        var scaleAnimation = animation.drive(scaleTween);
+
+        // Animation de fondu
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve));
+        var fadeAnimation = animation.drive(fadeTween);
+
+        return ScaleTransition(
+          scale: scaleAnimation,
+          child: FadeTransition(
+            opacity: fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 500),
+      reverseTransitionDuration: const Duration(milliseconds: 500),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userId = widget.userData['id'].toString();
@@ -62,7 +92,7 @@ class _EventSelectionScreenState extends State<EventSelectionScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          SizedBox(width: 48), // Espace pour équilibrer avec l'icône
+                          SizedBox(width: 48),
                           Expanded(
                             child: Center(
                               child: Text(
@@ -146,32 +176,22 @@ class _EventSelectionScreenState extends State<EventSelectionScreen>
 
                           final filteredEvents = snapshot.data!.docs.where((event) {
                             final eventData = event.data() as Map<String, dynamic>;
+                            final status = eventData['status'] as String?;
                             final startDateStr = eventData['startDate'] as String?;
                             final endDateStr = eventData['endDate'] as String?;
 
                             print(
-                                'Événement ${event.id}: startDate=$startDateStr, endDate=$endDateStr');
+                                'Événement ${event.id}: status=$status, startDate=$startDateStr, endDate=$endDateStr');
 
-                            if (startDateStr == null || endDateStr == null) {
-                              print('Dates manquantes pour ${event.id}');
+                            if (status == null || startDateStr == null || endDateStr == null) {
+                              print('Données manquantes pour ${event.id}');
                               return false;
                             }
 
-                            final startDate = DateTime.tryParse(startDateStr)?.toUtc();
-                            final endDate = DateTime.tryParse(endDateStr)?.toUtc();
-
-                            if (startDate == null || endDate == null) {
-                              print('Erreur de parsing des dates pour ${event.id}');
-                              return false;
-                            }
-
-                            final isActive = (startDate.isBefore(today) ||
-                                    startDate.isAtSameMomentAs(today)) &&
-                                (endDate.isAfter(today) || endDate.isAtSameMomentAs(today));
-
-                            print(
-                                'Événement ${event.id} - Actif: $isActive (start: $startDate, end: $endDate)');
-                            return isActive;
+                            // Option 1 : Basé sur le statut "Actif"
+                            final isActiveByStatus = status == "Actif";
+                            print('Événement ${event.id} - Actif (par statut): $isActiveByStatus');
+                            return isActiveByStatus;
                           }).toList();
 
                           if (filteredEvents.isEmpty) {
@@ -245,8 +265,8 @@ class _EventSelectionScreenState extends State<EventSelectionScreen>
                                         trailing:
                                             Icon(Icons.arrow_forward_ios, color: Color(0xFF0E6655)),
                                         onTap: () {
-                                          _navigateBasedOnRole(
-                                              context, event.id, eventData, userId);
+                                          _navigateToAccessCodeScreen(
+                                              context, event.id, eventData);
                                         },
                                       ),
                                     ),
@@ -268,62 +288,18 @@ class _EventSelectionScreenState extends State<EventSelectionScreen>
     );
   }
 
-  void _navigateBasedOnRole(
-      BuildContext context, String eventId, Map<String, dynamic> eventData, String userId) {
-    final role = widget.userData['role'];
-    if (role == 'Membre' || role == 'Organisateur' || role == 'Administrateur') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => UserProfileScreen(
-            userData: widget.userData..addAll({'eventId': eventId, 'eventData': eventData}),
-          ),
+  void _navigateToAccessCodeScreen(
+      BuildContext context, String eventId, Map<String, dynamic> eventData) {
+    Navigator.push(
+      context,
+      _createModernRoute(
+        AccessCodeScreen(
+          eventId: eventId,
+          eventData: eventData,
+          userData: widget.userData,
         ),
-      );
-      _updatePresenceInFirestore(userId, eventId);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Rôle non pris en charge",
-            style: TextStyle(fontFamily: 'CenturyGothic'),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _updatePresenceInFirestore(String userId, String eventId) async {
-    try {
-      final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
-      final userDoc = await userRef.get();
-      if (!userDoc.exists) {
-        print('Utilisateur introuvable');
-        return;
-      }
-      final userData = userDoc.data() as Map<String, dynamic>;
-      if (userData['events'] != null && userData['events'].contains(eventId)) {
-        final eventRef = FirebaseFirestore.instance.collection('events').doc(eventId);
-        final eventHistoryRef =
-            FirebaseFirestore.instance.collection('event_history').doc('${eventId}_$userId');
-
-        await eventRef.update({'presence.$userId': true});
-        await eventHistoryRef.set({
-          'eventId': eventId,
-          'userId': userId,
-          'userName': '${userData['name']} ${userData['surname']}',
-          'role': userData['role'] ?? 'Non défini',
-          'email': userData['email'] ?? 'Non disponible',
-          'presence': true,
-          'addedDate': FieldValue.serverTimestamp(),
-          'eventEndDate': (await eventRef.get()).data()?['endDate'],
-        }, SetOptions(merge: true));
-        print('Présence mise à jour dans events et event_history');
-      }
-    } catch (e) {
-      print('Erreur lors de la mise à jour de la présence : $e');
-    }
+      ),
+    );
   }
 }
 
@@ -383,6 +359,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(children: shapes);
+    return Stack(
+      children: shapes,
+    );
   }
 }

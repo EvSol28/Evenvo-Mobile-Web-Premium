@@ -36,17 +36,92 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     super.dispose();
   }
 
+  // Transition moderne avec fondu et mise à l'échelle
+  Route _createModernRoute(Widget destination) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => destination,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const beginScale = 0.95; // Légère réduction initiale
+        const endScale = 1.0; // Taille normale
+        const curve = Curves.easeInOut;
+
+        // Animation de mise à l'échelle
+        var scaleTween = Tween<double>(begin: beginScale, end: endScale).chain(CurveTween(curve: curve));
+        var scaleAnimation = animation.drive(scaleTween);
+
+        // Animation de fondu
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve));
+        var fadeAnimation = animation.drive(fadeTween);
+
+        return ScaleTransition(
+          scale: scaleAnimation,
+          child: FadeTransition(
+            opacity: fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 500),
+      reverseTransitionDuration: const Duration(milliseconds: 500),
+    );
+  }
+
   Future<void> _fetchVoteStatus() async {
     try {
-      var eventDoc = await FirebaseFirestore.instance
+      // Récupérer le rôle de l'utilisateur
+      final userRoleName = widget.userData['role'] as String?;
+      if (userRoleName == null) {
+        print('Rôle non défini pour l\'utilisateur ${widget.userData['id']}');
+        setState(() {
+          voteEnabled = false;
+        });
+        return;
+      }
+
+      // Récupérer l'ID du rôle dans la collection 'roles'
+      final roleQuery = await FirebaseFirestore.instance
+          .collection('roles')
+          .where('name', isEqualTo: userRoleName)
+          .limit(1)
+          .get();
+
+      if (roleQuery.docs.isEmpty) {
+        print('Rôle $userRoleName non trouvé dans la collection roles');
+        setState(() {
+          voteEnabled = false;
+        });
+        return;
+      }
+
+      final roleId = roleQuery.docs.first.id;
+
+      // Récupérer les données de l'événement
+      final eventDoc = await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.userData['eventId'])
           .get();
 
-      if (eventDoc.exists) {
-        print("Vote status récupéré : ${eventDoc.data()?['voteEnabled']}");
+      if (!eventDoc.exists) {
+        print('Événement ${widget.userData['eventId']} non trouvé');
         setState(() {
-          voteEnabled = eventDoc.data()?['voteEnabled'] ?? false;
+          voteEnabled = false;
+        });
+        return;
+      }
+
+      final eventData = eventDoc.data() as Map<String, dynamic>;
+      final roleVoteSettings = eventData['roleVoteSettings'] as Map<String, dynamic>?;
+
+      if (roleVoteSettings != null && roleVoteSettings.containsKey(roleId)) {
+        final voteEnabledForRole = roleVoteSettings[roleId]['voteEnabled'] as bool? ?? false;
+        setState(() {
+          voteEnabled = voteEnabledForRole;
+        });
+        print('Utilisateur ${widget.userData['id']} avec rôle $userRoleName peut voter : $voteEnabled');
+      } else {
+        print('Aucun paramètre de vote trouvé pour le rôle $roleId dans l\'événement ${widget.userData['eventId']}');
+        setState(() {
+          voteEnabled = false;
         });
       }
     } catch (e) {
@@ -54,23 +129,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       setState(() {
         voteEnabled = false;
       });
-    }
-  }
-
-  Future<void> _toggleVoteStatus(bool enabled) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(widget.userData['eventId'])
-          .update({'voteEnabled': enabled});
-
-      setState(() {
-        voteEnabled = enabled;
-      });
-
-      print("Vote ${enabled ? "activé" : "désactivé"} avec succès");
-    } catch (e) {
-      print("Erreur lors de la mise à jour du vote: $e");
     }
   }
 
@@ -87,166 +145,159 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           children: [
             AnimatedBackground(controller: _backgroundController),
             SafeArea(
-              bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.arrow_back,
-                            color: Color(0xFF6F6F6F),
-                            size: 28,
+              bottom: true,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_back,
+                              color: Color(0xFF6F6F6F),
+                              size: 28,
+                            ),
+                            onPressed: () => Navigator.pop(context),
                           ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              "Profil Utilisateur",
-                              style: TextStyle(
-                                fontFamily: 'CenturyGothic',
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF6F6F6F),
+                          Expanded(
+                            child: Center(
+                              child: Text(
+                                "Profil Utilisateur",
+                                style: TextStyle(
+                                  fontFamily: 'CenturyGothic',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF6F6F6F),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.power_settings_new_rounded,
-                            color: Color(0xFF6F6F6F),
-                            size: 28,
+                          IconButton(
+                            icon: Icon(
+                              Icons.power_settings_new_rounded,
+                              color: Color(0xFF6F6F6F),
+                              size: 28,
+                            ),
+                            onPressed: () async {
+                              await FirebaseAuth.instance.signOut();
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => AuthenticationScreen()),
+                              );
+                            },
                           ),
-                          onPressed: () async {
-                            await FirebaseAuth.instance.signOut();
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => AuthenticationScreen()),
-                            );
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Divider(
-                    color: Color(0xFF6F6F6F),
-                    thickness: 1,
-                    indent: 16,
-                    endIndent: 16,
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        SizedBox(height: 100), // Espace pour descendre le conteneur
-                        // Conteneur unique pour l'image et les infos
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 30),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: BackdropFilter(
-                              filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFd9f9ef).withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Color(0xFFd9f9ef).withOpacity(0.5),
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0xFFd9f9ef).withOpacity(0.1),
-                                      blurRadius: 20,
-                                      spreadRadius: 5,
-                                    ),
-                                  ],
+                    Divider(
+                      color: Color(0xFF6F6F6F),
+                      thickness: 1,
+                      indent: 16,
+                      endIndent: 16,
+                    ),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFd9f9ef).withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Color(0xFFd9f9ef).withOpacity(0.5),
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0xFFd9f9ef).withOpacity(0.1),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
                                 ),
-                                child: Column(
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  radius: 80,
+                                  backgroundColor: Colors.transparent,
+                                  backgroundImage: AssetImage(avatarImage),
+                                ),
+                                SizedBox(height: 30),
+                                Text(
+                                  "$civility. ${widget.userData['name'] ?? 'Non renseigné'} ${widget.userData['surname'] ?? 'Non renseigné'}",
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0E6655),
+                                    fontFamily: 'CenturyGothic',
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 15),
+                                Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    CircleAvatar(
-                                      radius: 80,
-                                      backgroundImage: AssetImage(avatarImage),
+                                    Icon(
+                                      Icons.work,
+                                      size: 20,
+                                      color: Color(0xFF0E6655),
                                     ),
-                                    SizedBox(height: 50), // Espace avant les infos
+                                    SizedBox(width: 8),
                                     Text(
-                                      "$civility. ${widget.userData['name'] ?? 'Non renseigné'} ${widget.userData['surname'] ?? 'Non renseigné'}",
+                                      "${widget.userData['role'] ?? 'Non renseigné'}",
                                       style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0E6655),
+                                        fontSize: 18,
+                                        color: Color(0xFF0E6655).withOpacity(0.8),
                                         fontFamily: 'CenturyGothic',
                                       ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    SizedBox(height: 15),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.work,
-                                          size: 20,
-                                          color: Color(0xFF0E6655),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          "${widget.userData['role'] ?? 'Non renseigné'}",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            color: Color(0xFF0E6655).withOpacity(0.8),
-                                            fontFamily: 'CenturyGothic',
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   ],
                                 ),
-                              ),
+                              ],
                             ),
                           ),
                         ),
-                        Spacer(), // Pousse le bouton en bas
-                        // Bouton "Voter" avec texte plus grand
-                        if (widget.userData['role'] == 'Membre' ||
-                            widget.userData['role'] == 'Organisateur')
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 30, vertical: 10),
-                            child: _buildGlassButton(
-                              context,
-                              text: "Voter",
-                              onPressed: voteEnabled
-                                  ? () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => VoteScreen(
-                                            userId: widget.userData['id'].toString(),
-                                            eventId:
-                                                widget.userData['eventId'].toString(),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  : null,
-                            ),
-                          ),
-                        SizedBox(height: 80), // Espace en bas
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+                    // Bouton "Voter" affiché dynamiquement selon voteEnabled
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                      child: _buildGlassButton(
+                        context,
+                        text: "Voter",
+                        onPressed: voteEnabled
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  _createModernRoute(
+                                    VoteScreen(
+                                      userId: widget.userData['id'].toString(),
+                                      eventId: widget.userData['eventId'].toString(),
+                                      canVote: voteEnabled,
+                                    ),
+                                  ),
+                                );
+                              }
+                            : null,
+                      ),
+                    ),
+                    SizedBox(height: 30),
+                  ],
+                ),
               ),
             ),
           ],
@@ -255,7 +306,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  // Bouton stylisé avec texte plus grand
   Widget _buildGlassButton(BuildContext context,
       {required String text, required VoidCallback? onPressed}) {
     return GestureDetector(
@@ -292,7 +342,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 text,
                 style: TextStyle(
                   fontFamily: 'CenturyGothic',
-                  fontSize: 16, // Taille augmentée de 14 à 20
+                  fontSize: 16,
                   color: Color(0xFF0E6655),
                   fontWeight: FontWeight.w600,
                 ),

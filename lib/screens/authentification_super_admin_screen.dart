@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'package:Evenvo_Mobile/screens/super_admin_event_selection_screen.dart';
+import 'package:Evenvo_Mobile/screens/authentification_choix_screen.dart';
 
 class AuthentificationSuperAdminScreen extends StatefulWidget {
   @override
@@ -18,7 +20,7 @@ class _AuthentificationSuperAdminScreenState
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscureText = true;
-  
+
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -53,6 +55,38 @@ class _AuthentificationSuperAdminScreenState
     super.dispose();
   }
 
+  // Transition moderne avec fondu et mise à l'échelle
+  Route _createModernRoute(Widget destination) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => destination,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const beginScale = 0.95; // Légère réduction initiale
+        const endScale = 1.0; // Taille normale
+        const curve = Curves.easeInOut;
+
+        // Animation de mise à l'échelle
+        var scaleTween = Tween<double>(begin: beginScale, end: endScale)
+            .chain(CurveTween(curve: curve));
+        var scaleAnimation = animation.drive(scaleTween);
+
+        // Animation de fondu
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0)
+            .chain(CurveTween(curve: curve));
+        var fadeAnimation = animation.drive(fadeTween);
+
+        return ScaleTransition(
+          scale: scaleAnimation,
+          child: FadeTransition(
+            opacity: fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 500),
+      reverseTransitionDuration: const Duration(milliseconds: 500),
+    );
+  }
+
   Future<void> _loginSuperAdmin() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
@@ -71,13 +105,18 @@ class _AuthentificationSuperAdminScreenState
         if (snapshot.exists && snapshot.data() != null) {
           var data = snapshot.data() as Map<String, dynamic>?;
           if (data == null || data['role'] != 'Super Admin') {
-            throw Exception('Cet utilisateur n\'est pas un super administrateur.');
+            throw Exception(
+                'Cet utilisateur n\'est pas un super administrateur.');
           }
         } else {
           throw Exception('Aucun super administrateur trouvé avec cet UID.');
         }
 
-        Navigator.pushReplacementNamed(context, '/super_admin_events');
+        // Utiliser la transition moderne pour naviguer vers SuperAdminEventSelectionScreen
+        Navigator.pushReplacement(
+          context,
+          _createModernRoute(SuperAdminEventSelectionScreen()),
+        );
       } on FirebaseAuthException catch (e) {
         _showErrorDialog('Erreur de connexion : ${e.message}');
       } catch (e) {
@@ -137,7 +176,8 @@ class _AuthentificationSuperAdminScreenState
     );
   }
 
-  Widget _buildGlassButton({required String text, required VoidCallback onPressed}) {
+  Widget _buildGlassButton(
+      {required String text, required VoidCallback onPressed}) {
     return GestureDetector(
       onTap: onPressed,
       child: ClipRRect(
@@ -184,60 +224,66 @@ class _AuthentificationSuperAdminScreenState
           children: [
             AnimatedBackground(controller: _backgroundController),
             SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Image.asset(
-                          'assets/logo.png',
-                          width: 100,
-                          height: 50,
-                        ),
-                      ],
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          top: 8.0, left: 16.0, right: 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Image.asset(
+                            'assets/logo.png',
+                            width: 100,
+                            height: 50,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: Center(
+                    SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.1),
+                    Center(
                       child: FadeTransition(
                         opacity: _fadeAnimation,
                         child: ScaleTransition(
                           scale: _scaleAnimation,
-                          child: SingleChildScrollView(
+                          child: Padding(
                             padding: EdgeInsets.all(24.0),
                             child: Form(
                               key: _formKey,
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(20),
                                 child: BackdropFilter(
-                                  filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                  filter: ui.ImageFilter.blur(
+                                      sigmaX: 5, sigmaY: 5),
                                   child: Container(
                                     padding: EdgeInsets.all(20),
                                     decoration: BoxDecoration(
                                       color: Color(0xFFe8f6f3).withOpacity(0.3),
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                        color: Color(0xFFd9f9ef).withOpacity(0.5),
+                                        color:
+                                            Color(0xFFd9f9ef).withOpacity(0.5),
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Color(0xFFd9f9ef).withOpacity(0.1),
+                                          color: Color(0xFFd9f9ef)
+                                              .withOpacity(0.1),
                                           blurRadius: 20,
                                           spreadRadius: 5,
                                         ),
                                       ],
                                     ),
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         SizedBox(height: 20),
                                         Text(
                                           'Authentification Super Admin',
-										  
                                           style: TextStyle(
-										  fontFamily: 'CenturyGothic',
+                                            fontFamily: 'CenturyGothic',
                                             fontSize: 22,
                                             fontWeight: FontWeight.bold,
                                             color: Color(0xFF0E6655),
@@ -246,22 +292,32 @@ class _AuthentificationSuperAdminScreenState
                                         SizedBox(height: 20),
                                         TextFormField(
                                           controller: _emailController,
-                                          keyboardType: TextInputType.emailAddress,
-                                          style: TextStyle(color: Color(0xFF0E6655)),
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          style:
+                                              TextStyle(color: Color(0xFF0E6655)),
                                           decoration: InputDecoration(
                                             labelText: 'Adresse Email',
-                                            labelStyle: TextStyle(color: Color(0xFF0E6655).withOpacity(0.8)),
-                                            prefixIcon: Icon(Icons.email, color: Color(0xFF0E6655)),
+                                            labelStyle: TextStyle(
+                                                color: Color(0xFF0E6655)
+                                                    .withOpacity(0.8)),
+                                            prefixIcon: Icon(Icons.email,
+                                                color: Color(0xFF0E6655)),
                                             filled: true,
-                                            fillColor: Color(0xFFa2d9ce).withOpacity(0.2),
+                                            fillColor: Color(0xFFa2d9ce)
+                                                .withOpacity(0.2),
                                             border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(15),
+                                              borderRadius:
+                                                  BorderRadius.circular(15),
                                               borderSide: BorderSide.none,
                                             ),
                                           ),
                                           validator: (value) {
-                                            if (value == null || value.isEmpty) return 'Veuillez entrer votre email';
-                                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value))
+                                            if (value == null || value.isEmpty)
+                                              return 'Veuillez entrer votre email';
+                                            if (!RegExp(
+                                                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                                .hasMatch(value))
                                               return 'Veuillez entrer un email valide';
                                             return null;
                                           },
@@ -270,45 +326,66 @@ class _AuthentificationSuperAdminScreenState
                                         TextFormField(
                                           controller: _passwordController,
                                           obscureText: _obscureText,
-                                          style: TextStyle(color: Color(0xFF0E6655)),
+                                          style:
+                                              TextStyle(color: Color(0xFF0E6655)),
                                           decoration: InputDecoration(
                                             labelText: 'Mot de passe',
-                                            labelStyle: TextStyle(color: Color(0xFF0E6655).withOpacity(0.8)),
-                                            prefixIcon: Icon(Icons.lock, color: Color(0xFF0E6655)),
+                                            labelStyle: TextStyle(
+                                                color: Color(0xFF0E6655)
+                                                    .withOpacity(0.8)),
+                                            prefixIcon: Icon(Icons.lock,
+                                                color: Color(0xFF0E6655)),
                                             suffixIcon: IconButton(
                                               icon: Icon(
-                                                _obscureText ? Icons.visibility : Icons.visibility_off,
+                                                _obscureText
+                                                    ? Icons.visibility
+                                                    : Icons.visibility_off,
                                                 color: Color(0xFF0E6655),
                                               ),
-                                              onPressed: () => setState(() => _obscureText = !_obscureText),
+                                              onPressed: () => setState(
+                                                  () => _obscureText =
+                                                      !_obscureText),
                                             ),
                                             filled: true,
-                                            fillColor: Color(0xFFa2d9ce).withOpacity(0.2),
+                                            fillColor: Color(0xFFa2d9ce)
+                                                .withOpacity(0.2),
                                             border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(15),
+                                              borderRadius:
+                                                  BorderRadius.circular(15),
                                               borderSide: BorderSide.none,
                                             ),
                                           ),
                                           validator: (value) {
-                                            if (value == null || value.isEmpty) return 'Veuillez entrer votre mot de passe';
-                                            if (value.length < 6) return 'Le mot de passe doit contenir au moins 6 caractères';
+                                            if (value == null || value.isEmpty)
+                                              return 'Veuillez entrer votre mot de passe';
+                                            if (value.length < 6)
+                                              return 'Le mot de passe doit contenir au moins 6 caractères';
                                             return null;
                                           },
                                         ),
                                         SizedBox(height: 30),
                                         _isLoading
-                                            ? CircularProgressIndicator(color: Color(0xFF0E6655))
+                                            ? CircularProgressIndicator(
+                                                color: Color(0xFF0E6655))
                                             : _buildGlassButton(
                                                 text: 'Connexion',
                                                 onPressed: _loginSuperAdmin,
                                               ),
                                         SizedBox(height: 20),
                                         TextButton(
-                                          onPressed: () => Navigator.pop(context),
+                                          onPressed: () {
+                                            // Utiliser la transition moderne pour le retour
+                                            Navigator.pushReplacement(
+                                              context,
+                                              _createModernRoute(
+                                                  AuthentificationChoixScreen()),
+                                            );
+                                          },
                                           child: Text(
                                             'Retour',
                                             style: TextStyle(
-                                              color: Color(0xFF0E6655).withOpacity(0.8),
+                                              color: Color(0xFF0E6655)
+                                                  .withOpacity(0.8),
                                               fontSize: 16,
                                             ),
                                           ),
@@ -323,8 +400,10 @@ class _AuthentificationSuperAdminScreenState
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.1),
+                  ],
+                ),
               ),
             ),
           ],
@@ -337,7 +416,7 @@ class _AuthentificationSuperAdminScreenState
 class AnimatedBackground extends StatefulWidget {
   final AnimationController controller;
 
-  AnimatedBackground({required this.controller});
+  const AnimatedBackground({required this.controller});
 
   @override
   _AnimatedBackgroundState createState() => _AnimatedBackgroundState();
@@ -356,13 +435,18 @@ class _AnimatedBackgroundState extends State<AnimatedBackground> {
     ];
   }
 
-  Widget _buildShape(double size, double top, double opacity, Color color, double initialAngle) {
+  Widget _buildShape(
+      double size, double top, double opacity, Color color, double initialAngle) {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
         return Positioned(
-          top: top + (math.sin(widget.controller.value * 2 * math.pi + initialAngle) * 20),
-          left: 20 + (math.cos(widget.controller.value * 2 * math.pi + initialAngle) * 20),
+          top: top +
+              (math.sin(widget.controller.value * 2 * math.pi + initialAngle) *
+                  20),
+          left: 20 +
+              (math.cos(widget.controller.value * 2 * math.pi + initialAngle) *
+                  20),
           child: Transform.rotate(
             angle: widget.controller.value * 2 * math.pi + initialAngle,
             child: Container(
@@ -370,7 +454,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground> {
               height: size,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(size / (4 + (math.sin(widget.controller.value * math.pi) * 2))),
+                borderRadius: BorderRadius.circular(
+                    size / (4 + (math.sin(widget.controller.value * math.pi) * 2))),
                 boxShadow: [
                   BoxShadow(
                     color: color.withOpacity(0.1),

@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
-import 'package:Evenvo_Mobile/screens/authentification_super_admin_screen.dart'; // Importez l'écran Super Admin
+import 'package:Evenvo_Mobile/screens/authentification_super_admin_screen.dart';
+import 'package:Evenvo_Mobile/screens/authentication_screen.dart';
 
 class AuthentificationChoixScreen extends StatefulWidget {
   @override
-  _AuthentificationChoixScreenState createState() => _AuthentificationChoixScreenState();
+  _AuthentificationChoixScreenState createState() =>
+      _AuthentificationChoixScreenState();
 }
 
-class _AuthentificationChoixScreenState extends State<AuthentificationChoixScreen>
-    with TickerProviderStateMixin {
+class _AuthentificationChoixScreenState
+    extends State<AuthentificationChoixScreen> with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -53,11 +55,13 @@ class _AuthentificationChoixScreenState extends State<AuthentificationChoixScree
         const curve = Curves.easeInOut;
 
         // Animation de mise à l'échelle
-        var scaleTween = Tween<double>(begin: beginScale, end: endScale).chain(CurveTween(curve: curve));
+        var scaleTween = Tween<double>(begin: beginScale, end: endScale)
+            .chain(CurveTween(curve: curve));
         var scaleAnimation = animation.drive(scaleTween);
 
         // Animation de fondu
-        var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve));
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0)
+            .chain(CurveTween(curve: curve));
         var fadeAnimation = animation.drive(fadeTween);
 
         return ScaleTransition(
@@ -68,7 +72,7 @@ class _AuthentificationChoixScreenState extends State<AuthentificationChoixScree
           ),
         );
       },
-      transitionDuration: const Duration(milliseconds: 500), // Durée légèrement plus longue pour plus de douceur
+      transitionDuration: const Duration(milliseconds: 500),
       reverseTransitionDuration: const Duration(milliseconds: 500),
     );
   }
@@ -83,24 +87,27 @@ class _AuthentificationChoixScreenState extends State<AuthentificationChoixScree
             AnimatedBackground(controller: _backgroundController),
             SafeArea(
               bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Image.asset(
-                          'assets/logo.png',
-                          width: 100,
-                          height: 50,
-                        ),
-                      ],
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          top: 8.0, left: 16.0, right: 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Image.asset(
+                            'assets/logo.png',
+                            width: 100,
+                            height: 50,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: Center(
+                    SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.1),
+                    Center(
                       child: FadeTransition(
                         opacity: _fadeAnimation,
                         child: ScaleTransition(
@@ -111,20 +118,24 @@ class _AuthentificationChoixScreenState extends State<AuthentificationChoixScree
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(20),
                                 child: BackdropFilter(
-                                  filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5, tileMode: ui.TileMode.clamp),
+                                  filter: ui.ImageFilter.blur(
+                                      sigmaX: 5, sigmaY: 5),
                                   child: Container(
                                     padding: EdgeInsets.all(20),
-                                    margin: EdgeInsets.symmetric(horizontal: 30),
+                                    margin:
+                                        EdgeInsets.symmetric(horizontal: 30),
                                     decoration: BoxDecoration(
                                       color: Color(0xFFd9f9ef).withOpacity(0.3),
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                        color: Color(0xFFd9f9ef).withOpacity(0.5),
+                                        color:
+                                            Color(0xFFd9f9ef).withOpacity(0.5),
                                         width: 1,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Color(0xFFd9f9ef).withOpacity(0.1),
+                                          color: Color(0xFFd9f9ef)
+                                              .withOpacity(0.1),
                                           blurRadius: 20,
                                           spreadRadius: 5,
                                         ),
@@ -153,43 +164,53 @@ class _AuthentificationChoixScreenState extends State<AuthentificationChoixScree
                                         ),
                                         SizedBox(height: 15),
                                         Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20.0),
                                           child: Text(
                                             "ēvenvo est votre solution idéale pour organiser, gérer et participer à des événements professionnels ou personnels en toute simplicité",
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
                                               fontFamily: 'CenturyGothic',
                                               fontSize: 14,
-                                              color: Color(0xFF0E6655).withOpacity(0.8),
+                                              color: Color(0xFF0E6655)
+                                                  .withOpacity(0.8),
                                             ),
                                           ),
                                         ),
                                         SizedBox(height: 50),
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             Expanded(
                                               child: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 10),
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 10),
                                                 child: _buildGlassButton(
                                                   context,
                                                   text: "Utilisateurs",
                                                   onPressed: () {
-                                                    Navigator.pushNamed(context, '/auth'); // Navigation par défaut pour l'instant
+                                                    Navigator.push(
+                                                      context,
+                                                      _createModernRoute(
+                                                          AuthenticationScreen()),
+                                                    );
                                                   },
                                                 ),
                                               ),
                                             ),
                                             Expanded(
                                               child: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 10),
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 10),
                                                 child: _buildGlassButton(
                                                   context,
                                                   text: "Super Admin",
                                                   onPressed: () {
                                                     Navigator.push(
                                                       context,
-                                                      _createModernRoute(AuthentificationSuperAdminScreen()),
+                                                      _createModernRoute(
+                                                          AuthentificationSuperAdminScreen()),
                                                     );
                                                   },
                                                 ),
@@ -207,8 +228,10 @@ class _AuthentificationChoixScreenState extends State<AuthentificationChoixScree
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.1),
+                  ],
+                ),
               ),
             ),
           ],
@@ -224,7 +247,7 @@ class _AuthentificationChoixScreenState extends State<AuthentificationChoixScree
       child: ClipRRect(
         borderRadius: BorderRadius.circular(30),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5, tileMode: ui.TileMode.clamp),
+          filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
           child: Container(
             padding: EdgeInsets.symmetric(vertical: 15),
             decoration: BoxDecoration(
@@ -263,7 +286,7 @@ class _AuthentificationChoixScreenState extends State<AuthentificationChoixScree
 class AnimatedBackground extends StatefulWidget {
   final AnimationController controller;
 
-  AnimatedBackground({required this.controller});
+  const AnimatedBackground({required this.controller});
 
   @override
   _AnimatedBackgroundState createState() => _AnimatedBackgroundState();
@@ -283,13 +306,18 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     ];
   }
 
-  Widget _buildShape(double size, double top, double opacity, Color color, double initialAngle) {
+  Widget _buildShape(
+      double size, double top, double opacity, Color color, double initialAngle) {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
         return Positioned(
-          top: top + (math.sin(widget.controller.value * 2 * math.pi + initialAngle) * 20).toDouble(),
-          left: 20 + (math.cos(widget.controller.value * 2 * math.pi + initialAngle) * 20).toDouble(),
+          top: top +
+              (math.sin(widget.controller.value * 2 * math.pi + initialAngle) *
+                  20).toDouble(),
+          left: 20 +
+              (math.cos(widget.controller.value * 2 * math.pi + initialAngle) *
+                  20).toDouble(),
           child: Transform.rotate(
             angle: widget.controller.value * 2 * math.pi + initialAngle,
             child: Container(
@@ -297,7 +325,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
               height: size,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(size / (4 + (math.sin(widget.controller.value * math.pi) * 2).toDouble())),
+                borderRadius: BorderRadius.circular(
+                    size / (4 + (math.sin(widget.controller.value * math.pi) * 2).toDouble())),
                 boxShadow: [
                   BoxShadow(
                     color: color.withOpacity(0.1),

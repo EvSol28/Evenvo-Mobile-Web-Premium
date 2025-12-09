@@ -7,11 +7,12 @@ import 'dart:math' as math;
 
 class SuperAdminEventSelectionScreen extends StatefulWidget {
   @override
-  _SuperAdminEventSelectionScreenState createState() => _SuperAdminEventSelectionScreenState();
+  _SuperAdminEventSelectionScreenState createState() =>
+      _SuperAdminEventSelectionScreenState();
 }
 
-class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectionScreen>
-    with TickerProviderStateMixin {
+class _SuperAdminEventSelectionScreenState
+    extends State<SuperAdminEventSelectionScreen> with TickerProviderStateMixin {
   late AnimationController _backgroundController;
 
   @override
@@ -29,6 +30,38 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
     super.dispose();
   }
 
+  // Transition moderne avec fondu et mise à l'échelle
+  Route _createModernRoute(Widget destination) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => destination,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const beginScale = 0.95; // Légère réduction initiale
+        const endScale = 1.0; // Taille normale
+        const curve = Curves.easeInOut;
+
+        // Animation de mise à l'échelle
+        var scaleTween = Tween<double>(begin: beginScale, end: endScale)
+            .chain(CurveTween(curve: curve));
+        var scaleAnimation = animation.drive(scaleTween);
+
+        // Animation de fondu
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0)
+            .chain(CurveTween(curve: curve));
+        var fadeAnimation = animation.drive(fadeTween);
+
+        return ScaleTransition(
+          scale: scaleAnimation,
+          child: FadeTransition(
+            opacity: fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 500),
+      reverseTransitionDuration: const Duration(milliseconds: 500),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -41,60 +74,68 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
               AnimatedBackground(controller: _backgroundController),
               SafeArea(
                 bottom: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center, // Centrer horizontalement
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          SizedBox(width: 48), // Espace pour équilibrer avec l'icône à droite
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                "Événement actifs",
-                                style: TextStyle(
-                                  fontFamily: 'CenturyGothic',
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF6F6F6F),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            top: 8.0, left: 16.0, right: 16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SizedBox(width: 48),
+                            Expanded(
+                              child: Center(
+                                child: Text(
+                                  "Événement actifs",
+                                  style: TextStyle(
+                                    fontFamily: 'CenturyGothic',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF6F6F6F),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center, // Centrer le texte
                               ),
                             ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.power_settings_new_rounded,
-                              color: Color(0xFF6F6F6F),
-                              size: 28,
+                            IconButton(
+                              icon: Icon(
+                                Icons.power_settings_new_rounded,
+                                color: Color(0xFF6F6F6F),
+                                size: 28,
+                              ),
+                              onPressed: () async {
+                                await FirebaseAuth.instance.signOut();
+                                Navigator.pushReplacementNamed(
+                                    context, '/auth_choix');
+                              },
                             ),
-                            onPressed: () async {
-                              await FirebaseAuth.instance.signOut();
-                              Navigator.pushReplacementNamed(context, '/auth_choix');
-                            },
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Divider(
-                      color: Color(0xFF6F6F6F),
-                      thickness: 1,
-                      indent: 16,
-                      endIndent: 16,
-                    ),
-                    SizedBox(height: 20),
-                    Expanded(
-                      child: StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance.collection('events').snapshots(),
+                      Divider(
+                        color: Color(0xFF6F6F6F),
+                        thickness: 1,
+                        indent: 16,
+                        endIndent: 16,
+                      ),
+                      SizedBox(height: 20),
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('events')
+                            .snapshots(),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator(color: Color(0xFF0E6655)));
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Center(
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFF0E6655)));
                           }
                           if (snapshot.hasError) {
-                            print("Erreur dans StreamBuilder: ${snapshot.error}");
+                            print(
+                                "Erreur dans StreamBuilder: ${snapshot.error}");
                             return Center(
                               child: Text(
                                 "Erreur de chargement: ${snapshot.error}",
@@ -106,8 +147,10 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
                               ),
                             );
                           }
-                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                            print("Aucune donnée trouvée dans la collection 'events'");
+                          if (!snapshot.hasData ||
+                              snapshot.data!.docs.isEmpty) {
+                            print(
+                                "Aucune donnée trouvée dans la collection 'events'");
                             return Center(
                               child: Text(
                                 "Aucun événement disponible",
@@ -120,38 +163,79 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
                             );
                           }
 
-                          final today = DateTime.now().toUtc();
-                          print("Date actuelle (UTC): $today");
+                          final today = DateTime.now();
+                          final todayDateOnly =
+                              DateTime(today.year, today.month, today.day);
+                          print("Date actuelle (sans heure): $todayDateOnly");
 
-                          final activeEvents = snapshot.data!.docs.where((event) {
-                            final eventData = event.data();
-                            print("Données brutes de l'événement ${event.id}: $eventData");
+                          final activeEvents = snapshot.data!.docs
+                              .where((event) {
+                                final eventData = event.data();
+                                print(
+                                    "Données brutes de l'événement ${event.id}: $eventData");
 
-                            if (eventData is! Map<String, dynamic>) {
-                              print("Erreur: Les données de l'événement ne sont pas une Map: $eventData");
-                              return false;
-                            }
+                                if (eventData is! Map<String, dynamic>) {
+                                  print(
+                                      "Erreur: Les données de l'événement ne sont pas une Map: $eventData");
+                                  return false;
+                                }
 
-                            final startDateStr = eventData['startDate'] as String?;
-                            final endDateStr = eventData['endDate'] as String?;
+                                // Vérifier le champ status
+                                final status = eventData['status'] as String?;
+                                if (status != "Actif") {
+                                  print(
+                                      "Événement ${event.id} exclu - Statut: $status (doit être 'Actif')");
+                                  return false;
+                                }
 
-                            if (startDateStr == null || endDateStr == null) {
-                              print("Erreur: startDate ou endDate manquant pour l'événement ${event.id}");
-                              return false;
-                            }
+                                final startDateStr =
+                                    eventData['startDate'] as String?;
+                                final endDateStr =
+                                    eventData['endDate'] as String?;
 
-                            final startDate = DateTime.tryParse(startDateStr)?.toUtc();
-                            final endDate = DateTime.tryParse(endDateStr)?.toUtc();
+                                if (startDateStr == null ||
+                                    endDateStr == null) {
+                                  print(
+                                      "Erreur: startDate ou endDate manquant pour l'événement ${event.id}");
+                                  return false;
+                                }
 
-                            if (startDate == null || endDate == null) {
-                              print("Erreur: Impossible de parser les dates pour l'événement ${event.id}");
-                              return false;
-                            }
+                                // Parser les dates et ignorer les heures
+                                final startDate =
+                                    DateTime.tryParse(startDateStr);
+                                final endDate = DateTime.tryParse(endDateStr);
 
-                            print("Événement ${event.id} - Début: $startDate, Fin: $endDate");
-                            return (startDate.isBefore(today) || startDate.isAtSameMomentAs(today)) &&
-                                endDate.isAfter(today);
-                          }).toList();
+                                if (startDate == null || endDate == null) {
+                                  print(
+                                      "Erreur: Impossible de parser les dates pour l'événement ${event.id}");
+                                  return false;
+                                }
+
+                                // Convertir les dates en format "date uniquement" (ignorer les heures)
+                                final startDateOnly = DateTime(
+                                    startDate.year,
+                                    startDate.month,
+                                    startDate.day);
+                                final endDateOnly = DateTime(
+                                    endDate.year, endDate.month, endDate.day);
+
+                                print(
+                                    "Événement ${event.id} - Début: $startDateOnly, Fin: $endDateOnly");
+
+                                // Vérifier si l'événement est actif
+                                final isActive = (startDateOnly
+                                            .isBefore(todayDateOnly) ||
+                                        startDateOnly
+                                            .isAtSameMomentAs(todayDateOnly)) &&
+                                    (endDateOnly.isAfter(todayDateOnly) ||
+                                        endDateOnly
+                                            .isAtSameMomentAs(todayDateOnly));
+
+                                print(
+                                    "Événement ${event.id} - Est actif: $isActive");
+                                return isActive;
+                              })
+                              .toList();
 
                           if (activeEvents.isEmpty) {
                             print("Aucun événement actif trouvé");
@@ -168,34 +252,44 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
                           }
 
                           return ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
                             itemCount: activeEvents.length,
                             itemBuilder: (context, index) {
                               final event = activeEvents[index];
-                              final eventData = event.data() as Map<String, dynamic>?;
+                              final eventData =
+                                  event.data() as Map<String, dynamic>?;
 
                               if (eventData == null) {
-                                print("Erreur: Données nulles pour l'événement ${event.id}");
+                                print(
+                                    "Erreur: Données nulles pour l'événement ${event.id}");
                                 return SizedBox.shrink();
                               }
 
                               return Padding(
-                                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 30),
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 10, horizontal: 30),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(20),
                                   child: BackdropFilter(
-                                    filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5, tileMode: ui.TileMode.clamp),
+                                    filter: ui.ImageFilter.blur(
+                                        sigmaX: 5, sigmaY: 5),
                                     child: Container(
                                       padding: EdgeInsets.all(20),
                                       decoration: BoxDecoration(
-                                        color: Color(0xFFd9f9ef).withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(20),
+                                        color: Color(0xFFd9f9ef)
+                                            .withOpacity(0.3),
+                                        borderRadius:
+                                            BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: Color(0xFFd9f9ef).withOpacity(0.5),
+                                          color: Color(0xFFd9f9ef)
+                                              .withOpacity(0.5),
                                           width: 1,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Color(0xFFd9f9ef).withOpacity(0.1),
+                                            color: Color(0xFFd9f9ef)
+                                                .withOpacity(0.1),
                                             blurRadius: 20,
                                             spreadRadius: 5,
                                           ),
@@ -204,7 +298,8 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
                                       child: ListTile(
                                         contentPadding: EdgeInsets.zero,
                                         title: Text(
-                                          eventData['name'] ?? 'Événement sans nom',
+                                          eventData['name'] ??
+                                              'Événement sans nom',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 18,
@@ -216,16 +311,20 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
                                           "Du ${eventData['startDate']} au ${eventData['endDate']}",
                                           style: TextStyle(
                                             fontSize: 14,
-                                            color: Color(0xFF0E6655).withOpacity(0.8),
+                                            color: Color(0xFF0E6655)
+                                                .withOpacity(0.8),
                                             fontFamily: 'CenturyGothic',
                                           ),
                                         ),
-                                        trailing: Icon(Icons.arrow_forward_ios, color: Color(0xFF0E6655)),
+                                        trailing: Icon(
+                                            Icons.arrow_forward_ios,
+                                            color: Color(0xFF0E6655)),
                                         onTap: () {
+                                          // Utiliser la transition moderne
                                           Navigator.push(
                                             context,
-                                            MaterialPageRoute(
-                                              builder: (context) => SuperAdminScanScreen(
+                                            _createModernRoute(
+                                              SuperAdminScanScreen(
                                                 eventId: event.id,
                                                 eventData: eventData,
                                               ),
@@ -241,8 +340,9 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
                           );
                         },
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -256,7 +356,7 @@ class _SuperAdminEventSelectionScreenState extends State<SuperAdminEventSelectio
 class AnimatedBackground extends StatefulWidget {
   final AnimationController controller;
 
-  AnimatedBackground({required this.controller});
+  const AnimatedBackground({required this.controller});
 
   @override
   _AnimatedBackgroundState createState() => _AnimatedBackgroundState();
@@ -276,13 +376,18 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     ];
   }
 
-  Widget _buildShape(double size, double top, double opacity, Color color, double initialAngle) {
+  Widget _buildShape(
+      double size, double top, double opacity, Color color, double initialAngle) {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
         return Positioned(
-          top: top + (math.sin(widget.controller.value * 2 * math.pi + initialAngle) * 20).toDouble(),
-          left: 20 + (math.cos(widget.controller.value * 2 * math.pi + initialAngle) * 20).toDouble(),
+          top: top +
+              (math.sin(widget.controller.value * 2 * math.pi + initialAngle) *
+                  20).toDouble(),
+          left: 20 +
+              (math.cos(widget.controller.value * 2 * math.pi + initialAngle) *
+                  20).toDouble(),
           child: Transform.rotate(
             angle: widget.controller.value * 2 * math.pi + initialAngle,
             child: Container(
@@ -290,7 +395,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
               height: size,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(size / (4 + (math.sin(widget.controller.value * math.pi) * 2).toDouble())),
+                borderRadius: BorderRadius.circular(
+                    size / (4 + (math.sin(widget.controller.value * math.pi) * 2).toDouble())),
                 boxShadow: [
                   BoxShadow(
                     color: color.withOpacity(0.1),

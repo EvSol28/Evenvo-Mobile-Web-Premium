@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:Evenvo_Mobile/screens/event_selection_screen.dart';
+import 'package:Evenvo_Mobile/screens/authentification_choix_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
@@ -19,34 +21,91 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
   bool isProcessing = false;
+  bool cameraPermissionGranted = false;
 
   late AnimationController _backgroundController;
 
   @override
   void initState() {
     super.initState();
-    _checkUserLoggedIn();
     _backgroundController = AnimationController(
       duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat();
+    _checkCameraPermission();
   }
 
-  Future<void> _checkUserLoggedIn() async {
-    await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (userDoc.exists) {
-        final userData = userDoc.data()!;
-        final role = userData['role'];
-        final events = List.from(userData['events'] ?? []);
-        if (role == 'Membre' && events.isNotEmpty) {
-          _navigateToEventSelection(userData);
-        }
-      }
+  // Vérifier les permissions de la caméra
+  Future<void> _checkCameraPermission() async {
+    final status = await Permission.camera.request();
+    if (status.isGranted) {
+      setState(() {
+        cameraPermissionGranted = true;
+      });
+      print("Permission caméra accordée");
+    } else {
+      setState(() {
+        cameraPermissionGranted = false;
+      });
+      print("Permission caméra refusée");
+      _showPermissionDeniedDialog();
     }
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Permission requise"),
+        content: const Text(
+            "L'accès à la caméra est nécessaire pour scanner les QR codes."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: const Text("Ouvrir les paramètres"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Annuler"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Transition moderne avec fondu et mise à l'échelle
+  Route _createModernRoute(Widget destination) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => destination,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const beginScale = 0.95; // Légère réduction initiale
+        const endScale = 1.0; // Taille normale
+        const curve = Curves.easeInOut;
+
+        // Animation de mise à l'échelle
+        var scaleTween = Tween<double>(begin: beginScale, end: endScale)
+            .chain(CurveTween(curve: curve));
+        var scaleAnimation = animation.drive(scaleTween);
+
+        // Animation de fondu
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0)
+            .chain(CurveTween(curve: curve));
+        var fadeAnimation = animation.drive(fadeTween);
+
+        return ScaleTransition(
+          scale: scaleAnimation,
+          child: FadeTransition(
+            opacity: fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 500),
+      reverseTransitionDuration: const Duration(milliseconds: 500),
+    );
   }
 
   @override
@@ -61,7 +120,8 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
+                    padding: const EdgeInsets.only(
+                        top: 8.0, left: 16.0, right: 16.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -91,7 +151,8 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFd9f9ef).withOpacity(0.1),
+                                    color: const Color(0xFFd9f9ef)
+                                        .withOpacity(0.1),
                                     blurRadius: 20,
                                     spreadRadius: 5,
                                   ),
@@ -110,31 +171,61 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: SizedBox(
-                                      width: 250,
-                                      height: 250,
-                                      child: QRView(
-                                        key: qrKey,
-                                        onQRViewCreated: _onQRViewCreated,
-                                        overlay: QrScannerOverlayShape(
-                                          borderColor: const Color(0xFF0E6655),
-                                          borderRadius: 8,
-                                          borderLength: 20,
-                                          borderWidth: 6,
-                                          cutOutSize: 230,
+                                  cameraPermissionGranted
+                                      ? ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          child: SizedBox(
+                                            width: 250,
+                                            height: 250,
+                                            child: QRView(
+                                              key: qrKey,
+                                              onQRViewCreated: _onQRViewCreated,
+                                              overlay: QrScannerOverlayShape(
+                                                borderColor:
+                                                    const Color(0xFF0E6655),
+                                                borderRadius: 8,
+                                                borderLength: 20,
+                                                borderWidth: 6,
+                                                cutOutSize: 230,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: 250,
+                                          height: 250,
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            color: Colors.grey.withOpacity(0.2),
+                                          ),
+                                          child: const Center(
+                                            child: Text(
+                                              "Permission caméra requise",
+                                              style: TextStyle(
+                                                fontFamily: 'CenturyGothic',
+                                                color: Color(0xFF0E6655),
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  ),
                                   const SizedBox(height: 16),
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context),
+                                    onPressed: () {
+                                      // Utiliser la transition moderne pour le retour
+                                      Navigator.pushReplacement(
+                                        context,
+                                        _createModernRoute(
+                                            AuthentificationChoixScreen()),
+                                      );
+                                    },
                                     child: Text(
                                       'Retour',
                                       style: TextStyle(
-                                        color: Color(0xFF0E6655).withOpacity(0.8),
+                                        color: Color(0xFF0E6655)
+                                            .withOpacity(0.8),
                                         fontSize: 16,
                                       ),
                                     ),
@@ -163,6 +254,9 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
         isProcessing = true;
         await _handleScannedCode(scanData.code!, context);
       }
+    }, onError: (error) {
+      print("Erreur dans le flux de scan : $error");
+      _showErrorDialog("Erreur de scan : $error", null);
     });
   }
 
@@ -170,6 +264,8 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     controller?.pauseCamera();
     try {
       final qrData = jsonDecode(scannedCode);
+      print('QR Data: $qrData'); // Débogage
+
       final userSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('name', isEqualTo: qrData['name'])
@@ -179,19 +275,44 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
       if (userSnapshot.docs.isNotEmpty) {
         final userData = userSnapshot.docs.first.data();
-        final role = qrData['role'];
+        print('User Data: $userData'); // Débogage
 
-        if (role == 'Membre') {
-          _showSuccessDialog(userData);
+        final roleName = qrData['role'];
+        if (roleName == null) {
+          _showErrorDialog("Aucun rôle spécifié dans le QR code", userData);
+          return;
+        }
+        print('Role Name from QR: $roleName'); // Débogage
+
+        final roleSnapshot = await FirebaseFirestore.instance
+            .collection('roles')
+            .where('name', isEqualTo: roleName)
+            .limit(1)
+            .get();
+
+        if (roleSnapshot.docs.isNotEmpty) {
+          final roleData = roleSnapshot.docs.first.data();
+          print('Role Data: $roleData'); // Débogage
+
+          if (roleData['MobileAccessGlobal'] == true) {
+            await FirebaseAuth.instance.signInAnonymously(); // Connexion anonyme activée
+            _showSuccessDialog(userData, roleName);
+          } else {
+            _showErrorDialog(
+                "Votre rôle n'est pas autorisé à accéder à l'application", userData);
+          }
         } else {
-          _showErrorDialog(
-              "Votre profil n'est pas autorisé à Evenvo", userData);
+          _showErrorDialog("Rôle non trouvé dans la base", userData);
+          print('No role found for name: $roleName'); // Débogage
         }
       } else {
         _showErrorDialog("Cet utilisateur n'existe pas en base", null);
+        print(
+            'No user found for name: ${qrData['name']}, surname: ${qrData['surname']}'); // Débogage
       }
     } catch (e) {
-      _showErrorDialog("Problème avec le QR code", null);
+      _showErrorDialog("Problème avec le QR code: $e", null);
+      print('Error: $e'); // Débogage
     } finally {
       isProcessing = false;
     }
@@ -200,11 +321,11 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
   void _navigateToEventSelection(Map<String, dynamic> userData) {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => EventSelectionScreen(userData: userData)),
+      _createModernRoute(EventSelectionScreen(userData: userData)),
     );
   }
 
-  void _showSuccessDialog(Map<String, dynamic> userData) {
+  void _showSuccessDialog(Map<String, dynamic> userData, String role) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -239,7 +360,8 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.check_circle, color: Color(0xFF0E6655), size: 60),
+                  const Icon(Icons.check_circle,
+                      color: Color(0xFF0E6655), size: 60),
                   const SizedBox(height: 20),
                   const Text(
                     "Bienvenue !",
@@ -261,9 +383,9 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    "Profil : Membre",
-                    style: TextStyle(
+                  Text(
+                    "Profil : $role",
+                    style: const TextStyle(
                       fontFamily: 'CenturyGothic',
                       color: Color(0xFF0E6655),
                       fontSize: 16,
@@ -451,18 +573,25 @@ class _AnimatedBackgroundState extends State<AnimatedBackground> {
     super.initState();
     shapes = [
       _buildShape(100, 50, 0.5, const Color(0xFFA2D9CE).withOpacity(0.5), 0),
-      _buildShape(80, 150, 0.7, const Color(0xFFA2D9CE).withOpacity(0.4), math.pi / 4),
-      _buildShape(120, 250, 0.6, const Color(0xFFA2D9CE).withOpacity(0.5), math.pi / 2),
+      _buildShape(
+          80, 150, 0.7, const Color(0xFFA2D9CE).withOpacity(0.4), math.pi / 4),
+      _buildShape(
+          120, 250, 0.6, const Color(0xFFA2D9CE).withOpacity(0.5), math.pi / 2),
     ];
   }
 
-  Widget _buildShape(double size, double top, double opacity, Color color, double initialAngle) {
+  Widget _buildShape(
+      double size, double top, double opacity, Color color, double initialAngle) {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
         return Positioned(
-          top: top + (math.sin(widget.controller.value * 2 * math.pi + initialAngle) * 20),
-          left: 20 + (math.cos(widget.controller.value * 2 * math.pi + initialAngle) * 20),
+          top: top +
+              (math.sin(widget.controller.value * 2 * math.pi + initialAngle) *
+                  20),
+          left: 20 +
+              (math.cos(widget.controller.value * 2 * math.pi + initialAngle) *
+                  20),
           child: Transform.rotate(
             angle: widget.controller.value * 2 * math.pi + initialAngle,
             child: Container(

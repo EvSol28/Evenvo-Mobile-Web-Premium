@@ -8,9 +8,14 @@ import 'dart:math' as math;
 class VoteScreen extends StatefulWidget {
   final String userId;
   final String eventId;
+  final bool canVote; // Ajout du paramètre canVote
 
-  const VoteScreen({Key? key, required this.userId, required this.eventId})
-      : super(key: key);
+  const VoteScreen({
+    Key? key,
+    required this.userId,
+    required this.eventId,
+    required this.canVote, // Paramètre requis
+  }) : super(key: key);
 
   @override
   _VoteScreenState createState() => _VoteScreenState();
@@ -18,11 +23,15 @@ class VoteScreen extends StatefulWidget {
 
 class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
   String? _userVote;
+  late bool _canVote; // Utiliser la valeur passée
+  String? _userRole;
   late AnimationController _backgroundController;
 
   @override
   void initState() {
     super.initState();
+    _canVote = widget.canVote; // Utiliser la valeur passée
+    _fetchUserRole(); // Récupérer le rôle pour l'affichage (optionnel)
     _checkUserVote();
     _backgroundController = AnimationController(
       duration: const Duration(seconds: 20),
@@ -34,6 +43,33 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
   void dispose() {
     _backgroundController.dispose();
     super.dispose();
+  }
+
+  // Récupérer le rôle de l'utilisateur (pour l'affichage ou autre usage)
+  Future<void> _fetchUserRole() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .get();
+
+      if (!userDoc.exists) {
+        print('Utilisateur ${widget.userId} non trouvé');
+        return;
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final userRoleName = userData['role'] as String?;
+      setState(() {
+        _userRole = userRoleName;
+      });
+
+      if (userRoleName == null) {
+        print('Rôle non défini pour l\'utilisateur ${widget.userId}');
+      }
+    } catch (e) {
+      print('Erreur lors de la récupération du rôle : $e');
+    }
   }
 
   Future<void> _checkUserVote() async {
@@ -50,6 +86,19 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _submitVote(String choice) async {
+    if (!_canVote) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Vous n'avez pas le droit de voter pour cet événement.",
+            style: TextStyle(fontFamily: 'CenturyGothic'),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     try {
       String customVoteId = "${widget.eventId}_${widget.userId}";
 
@@ -98,7 +147,6 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
         _userVote = choice;
       });
 
-      // Couleur du SnackBar basée sur le vote
       Color snackBarColor = _getVoteColor(choice);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -124,14 +172,13 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Fonction pour obtenir la couleur associée à chaque vote
   Color _getVoteColor(String? choice) {
     switch (choice) {
       case "Oui":
         return Color(0xFF5cc29b); // Vert
       case "Non":
         return Color(0xFFF26060); // Rouge
-      case "S'abstenir": // Correction de la syntaxe
+      case "S'abstenir":
         return Colors.grey;
       default:
         return Colors.grey;
@@ -208,8 +255,7 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
-                          SizedBox(height: 100), // Espace pour descendre un peu
-                          // Conteneur pour le titre et les boutons de vote
+                          SizedBox(height: 100),
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
@@ -248,11 +294,21 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
                                         textAlign: TextAlign.center,
                                       ),
                                       SizedBox(height: 20),
-                                      _voteButton("Oui", Color(0xFF5cc29b)),
-                                      SizedBox(height: 16),
-                                      _voteButton("Non", Color(0xFFF26060)),
-                                      SizedBox(height: 16),
-                                      _voteButton("S'abstenir", Colors.grey),
+                                      if (_canVote) ...[
+                                        _voteButton("Oui", Color(0xFF5cc29b)),
+                                        SizedBox(height: 16),
+                                        _voteButton("Non", Color(0xFFF26060)),
+                                        SizedBox(height: 16),
+                                        _voteButton("S'abstenir", Colors.grey),
+                                      ] else
+                                        Text(
+                                          "Vous n'avez pas le droit de voter",
+                                          style: TextStyle(
+                                            fontFamily: 'CenturyGothic',
+                                            fontSize: 16,
+                                            color: Colors.red,
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -260,7 +316,6 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
                             ),
                           ),
                           SizedBox(height: 20),
-                          // Conteneur pour le vote actuel
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
@@ -313,7 +368,7 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
                               ),
                             ),
                           ),
-                          SizedBox(height: 50), // Espace en bas
+                          SizedBox(height: 50),
                         ],
                       ),
                     ),
@@ -339,8 +394,8 @@ class _VoteScreenState extends State<VoteScreen> with TickerProviderStateMixin {
             padding: EdgeInsets.symmetric(vertical: 15),
             decoration: BoxDecoration(
               color: isSelected
-                  ? color.withOpacity(0.8) // Plus foncé quand sélectionné
-                  : color.withOpacity(0.3), // Clair par défaut
+                  ? color.withOpacity(0.8)
+                  : color.withOpacity(0.3),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
                 color: color.withOpacity(0.5),

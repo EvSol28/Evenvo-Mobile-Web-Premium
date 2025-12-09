@@ -63,19 +63,20 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Permission requise"),
-        content: Text("L'accès à la caméra est nécessaire pour scanner les QR codes."),
+        title: const Text("Permission requise"),
+        content: const Text(
+            "L'accès à la caméra est nécessaire pour scanner les QR codes."),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               openAppSettings();
             },
-            child: Text("Ouvrir les paramètres"),
+            child: const Text("Ouvrir les paramètres"),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Annuler"),
+            child: const Text("Annuler"),
           ),
         ],
       ),
@@ -99,26 +100,49 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
       }
     }, onError: (error) {
       print("Erreur dans le flux de scan : $error");
-      _showErrorDialog("Erreur de scan : $error", null);
+      _showErrorDialog("Erreur de scan : $error", null, null);
     });
   }
 
   Future<void> _handleQRCode(String? qrCode) async {
     if (qrCode == null) {
-      _showErrorDialog("Code QR invalide", null);
+      _showErrorDialog("Code QR invalide", null, null);
       return;
     }
 
     try {
       print("QR code scanné : $qrCode");
-      Map<String, dynamic> qrData = jsonDecode(qrCode) as Map<String, dynamic>;
-      final email = qrData['email'] as String?;
 
-      if (email == null) {
-        _showErrorDialog("Email manquant dans le QR code", null);
+      Map<String, dynamic>? qrData;
+      String? email;
+      String? userIdFromQr;
+
+      // Vérifier si le QR code est une chaîne JSON valide
+      try {
+        qrData = jsonDecode(qrCode) as Map<String, dynamic>;
+        email = qrData['email'] as String?;
+        userIdFromQr = qrData['userId'] as String?;
+      } catch (e) {
+        print("Le QR code n'est pas une chaîne JSON valide : $e");
+        _showErrorDialog(
+          "Ce code n'est pas un QR code valide pour cet événement. Seuls les QR codes au format JSON sont acceptés.",
+          null,
+          null,
+        );
         return;
       }
 
+      // Vérifier que les champs email et userId sont présents
+      if (email == null || userIdFromQr == null) {
+        _showErrorDialog(
+          "Le QR code doit contenir un email et un userId",
+          null,
+          null,
+        );
+        return;
+      }
+
+      // Rechercher l'utilisateur dans Firestore avec l'email
       final userQuery = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isEqualTo: email)
@@ -126,7 +150,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
           .get();
 
       if (userQuery.docs.isEmpty) {
-        _showErrorDialog("Utilisateur non trouvé avec cet email", null);
+        _showErrorDialog("Utilisateur non trouvé avec cet email", null, null);
         return;
       }
 
@@ -134,28 +158,85 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
       final userId = userDoc.id;
       final userData = userDoc.data() as Map<String, dynamic>;
 
+      // Vérifier que l'userId du QR code correspond à l'utilisateur trouvé
+      if (userId != userIdFromQr) {
+        _showErrorDialog(
+          "L'userId du QR code ne correspond pas à l'utilisateur trouvé",
+          null,
+          null,
+        );
+        return;
+      }
+
+      // Récupérer le rôle de l'utilisateur
+      final roleId = userData['roleId'] as String?;
+      print("RoleId de l'utilisateur : $roleId");
+
+      String roleName = 'Non défini';
+
+      if (roleId != null) {
+        final roleDoc = await FirebaseFirestore.instance
+            .collection('roles')
+            .doc(roleId)
+            .get();
+
+        print("Document de rôle existe : ${roleDoc.exists}");
+        if (roleDoc.exists) {
+          final roleData = roleDoc.data() as Map<String, dynamic>;
+          print("Données du rôle : $roleData");
+          roleName = roleData['name'] as String? ?? 'Non défini';
+        }
+      } else {
+        roleName = userData['role'] as String? ?? 'Non défini';
+        print("RoleId absent, utilisation du champ role : $roleName");
+      }
+
+      // Récupérer les données de l'événement
       final eventDoc = await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.eventId)
           .get();
-      final participants = List<String>.from(eventDoc['participants'] ?? []);
 
-      if (participants.contains(userId)) {
-        await _updatePresence(userId, userData);
-        _showSuccessDialog(userData);
-      } else {
+      if (!eventDoc.exists) {
         _showErrorDialog(
-          "${userData['name']} ${userData['surname']} n'est pas invité à cet événement",
+          "L'événement n'existe pas dans la base de données",
           userData,
+          roleName,
+        );
+        return;
+      }
+
+      final eventData = eventDoc.data();
+      if (eventData == null) {
+        _showErrorDialog(
+          "Les données de l'événement sont introuvables",
+          userData,
+          roleName,
+        );
+        return;
+      }
+
+      final participants = eventData.containsKey('participants')
+          ? List<String>.from(eventData['participants'] as List<dynamic>? ?? [])
+          : <String>[];
+
+      if (participants.contains(userIdFromQr)) {
+        await _updatePresence(userIdFromQr, userData, roleName);
+      } else {
+        _showNotInvitedDialog(
+          "${userData['name'] ?? 'Inconnu'} ${userData['surname'] ?? 'Inconnu'} n'est pas invité à cet événement.",
+          userData,
+          roleName,
         );
       }
     } catch (e) {
       print("Erreur dans _handleQRCode : $e");
-      _showErrorDialog("Erreur lors du traitement: $e", null);
+      _showErrorDialog("Erreur lors du traitement : $e", null, null);
     }
   }
 
-  Future<void> _updatePresence(String userId, Map<String, dynamic> userData) async {
+  Future<void> _updatePresence(
+      String userId, Map<String, dynamic> userData, String roleName) async {
     try {
       final eventRef = FirebaseFirestore.instance
           .collection('events')
@@ -173,24 +254,26 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
         'eventId': widget.eventId,
         'userId': userId,
         'userName': '${userData['name']} ${userData['surname']}',
-        'role': userData['role'] ?? 'Non défini',
+        'role': roleName,
         'email': userData['email'] ?? 'Non disponible',
         'presence': true,
         'scanDate': FieldValue.serverTimestamp(),
         'eventName': widget.eventData['name'],
       }, SetOptions(merge: true));
+
+      _showSuccessDialog(userData, roleName);
     } catch (e) {
-      print("Erreur lors de la mise à jour de la présence: $e");
-      throw e;
+      print("Erreur lors de la mise à jour de la présence : $e");
+      _showErrorDialog("Erreur lors de la mise à jour : $e", userData, roleName);
     }
   }
 
-  void _showSuccessDialog(Map<String, dynamic> userData) {
+  void _showSuccessDialog(Map<String, dynamic> userData, String roleName) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      transitionDuration: Duration(milliseconds: 300),
+      transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, anim1, anim2) => AlertDialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -201,17 +284,17 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
             filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
             child: Container(
               width: 300,
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Color(0xFFD9F9EF).withOpacity(0.3),
+                color: const Color(0xFFD9F9EF).withOpacity(0.3),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Color(0xFFD9F9EF).withOpacity(0.5),
+                  color: const Color(0xFFD9F9EF).withOpacity(0.5),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFFD9F9EF).withOpacity(0.1),
+                    color: const Color(0xFFD9F9EF).withOpacity(0.1),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -220,9 +303,10 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle, color: Color(0xFF0E6655), size: 60),
-                  SizedBox(height: 20),
-                  Text(
+                  const Icon(Icons.check_circle,
+                      color: Color(0xFF0E6655), size: 60),
+                  const SizedBox(height: 20),
+                  const Text(
                     "Validé !",
                     style: TextStyle(
                       fontFamily: 'CenturyGothic',
@@ -231,37 +315,46 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     "${userData['name']} ${userData['surname']}",
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'CenturyGothic',
                       color: Color(0xFF0E6655),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    widget.eventData['name'],
-                    style: TextStyle(
+                    "Rôle : $roleName",
+                    style: const TextStyle(
                       fontFamily: 'CenturyGothic',
-                      color: Color(0xFF0E6655).withOpacity(0.8),
+                      color: Color(0xFF0E6655),
                       fontSize: 16,
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.eventData['name'],
+                    style: const TextStyle(
+                      fontFamily: 'CenturyGothic',
+                      color: Color(0xFF0E6655),
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     "${userData['name']} ${userData['surname']} est invité à cet événement",
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'CenturyGothic',
-                      color: Color(0xFF0E6655).withOpacity(0.8),
+                      color: Color(0xFF0E6655),
                       fontSize: 16,
                       height: 1.5,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
@@ -272,12 +365,12 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                     },
                     child: Container(
                       width: double.infinity,
-                      padding: EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: Color(0xFF0E6655),
+                        color: const Color(0xFF0E6655),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
+                      child: const Text(
                         "Continuer",
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -304,12 +397,13 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
     );
   }
 
-  void _showErrorDialog(String message, Map<String, dynamic>? userData) {
+  void _showErrorDialog(
+      String message, Map<String, dynamic>? userData, String? roleName) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      transitionDuration: Duration(milliseconds: 300),
+      transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, anim1, anim2) => AlertDialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -320,17 +414,17 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
             filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
             child: Container(
               width: 300,
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Color(0xFFD9F9EF).withOpacity(0.3),
+                color: const Color(0xFFD9F9EF).withOpacity(0.3),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Color(0xFFD9F9EF).withOpacity(0.5),
+                  color: const Color(0xFFD9F9EF).withOpacity(0.5),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFFD9F9EF).withOpacity(0.1),
+                    color: const Color(0xFFD9F9EF).withOpacity(0.1),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -340,16 +434,16 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.red,
                     ),
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.close, color: Colors.white, size: 40),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(Icons.close, color: Colors.white, size: 40),
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    "Non validé",
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Erreur",
                     style: TextStyle(
                       fontFamily: 'CenturyGothic',
                       color: Colors.red,
@@ -357,39 +451,49 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   if (userData != null) ...[
                     Text(
                       "${userData['name']} ${userData['surname']}",
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'CenturyGothic',
                         color: Colors.red,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                    if (roleName != null)
+                      Text(
+                        "Rôle : $roleName",
+                        style: const TextStyle(
+                          fontFamily: 'CenturyGothic',
+                          color: Colors.red,
+                          fontSize: 16,
+                        ),
+                      ),
+                    const SizedBox(height: 8),
                     Text(
                       widget.eventData['name'],
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'CenturyGothic',
-                        color: Colors.red.withOpacity(0.8),
+                        color: Colors.red,
                         fontSize: 16,
                       ),
                     ),
                   ],
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     message,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'CenturyGothic',
-                      color: Colors.red.withOpacity(0.8),
+                      color: Colors.red,
                       fontSize: 16,
                       height: 1.5,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
@@ -400,12 +504,142 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                     },
                     child: Container(
                       width: double.infinity,
-                      padding: EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
+                      child: const Text(
+                        "Continuer",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'CenturyGothic',
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(opacity: anim1.value, child: child),
+        );
+      },
+    );
+  }
+
+  void _showNotInvitedDialog(
+      String message, Map<String, dynamic> userData, String? roleName) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) => AlertDialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        contentPadding: EdgeInsets.zero,
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+            child: Container(
+              width: 300,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD9F9EF).withOpacity(0.3),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFFD9F9EF).withOpacity(0.5),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD9F9EF).withOpacity(0.1),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error, color: Colors.red, size: 60),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Utilisateur non invité !",
+                    style: TextStyle(
+                      fontFamily: 'CenturyGothic',
+                      color: Colors.red,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "${userData['name'] ?? 'Inconnu'} ${userData['surname'] ?? 'Inconnu'}",
+                    style: const TextStyle(
+                      fontFamily: 'CenturyGothic',
+                      color: Colors.red,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (roleName != null)
+                    Text(
+                      "Rôle : $roleName",
+                      style: const TextStyle(
+                        fontFamily: 'CenturyGothic',
+                        color: Colors.red,
+                        fontSize: 16,
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.eventData['name'],
+                    style: const TextStyle(
+                      fontFamily: 'CenturyGothic',
+                      color: Colors.red,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      fontFamily: 'CenturyGothic',
+                      color: Colors.red,
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (mounted) {
+                        setState(() => isScanning = true);
+                        controller?.resumeCamera();
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
                         "Continuer",
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -441,94 +675,98 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
           children: [
             AnimatedBackground(controller: _backgroundController),
             SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.arrow_back,
-                            color: Color(0xFF6F6F6F),
-                            size: 28,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context); // Retour à l'écran précédent
-                          },
-                        ),
-                        Flexible(
-                          child: Text(
-                            "Scanner QR - ${widget.eventData['name']}",
-                            style: TextStyle(
-                              fontFamily: 'CenturyGothic',
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          top: 8.0, left: 16.0, right: 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back,
                               color: Color(0xFF6F6F6F),
+                              size: 28,
                             ),
-                            overflow: TextOverflow.ellipsis,
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
                           ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.power_settings_new_rounded,
-                            color: Color(0xFF6F6F6F),
-                            size: 28,
+                          Flexible(
+                            child: Text(
+                              "Scanner QR - ${widget.eventData['name']}",
+                              style: const TextStyle(
+                                fontFamily: 'CenturyGothic',
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6F6F6F),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          onPressed: () async {
-                            await FirebaseAuth.instance.signOut();
-                            Navigator.pushReplacementNamed(context, '/auth_choix');
-                          },
-                        ),
-                      ],
+                          IconButton(
+                            icon: const Icon(
+                              Icons.power_settings_new_rounded,
+                              color: Color(0xFF6F6F6F),
+                              size: 28,
+                            ),
+                            onPressed: () async {
+                              await FirebaseAuth.instance.signOut();
+                              Navigator.pushReplacementNamed(
+                                  context, '/auth_choix');
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Divider(
-                    color: Color(0xFF6F6F6F),
-                    thickness: 1,
-                    indent: 16,
-                    endIndent: 16,
-                  ),
-                  SizedBox(height: 20),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFD9F9EF).withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Color(0xFFD9F9EF).withOpacity(0.5),
-                            width: 1,
+                    const Divider(
+                      color: Color(0xFF6F6F6F),
+                      thickness: 1,
+                      indent: 16,
+                      endIndent: 16,
+                    ),
+                    const SizedBox(height: 20),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD9F9EF).withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFD9F9EF).withOpacity(0.5),
+                              width: 1,
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          isScanning
-                              ? "Scannez le QR code d'un participant"
-                              : "En attente...",
-                          style: TextStyle(
-                            fontFamily: 'CenturyGothic',
-                            fontSize: 18,
-                            color: Color(0xFF0E6655),
-                            fontWeight: FontWeight.bold,
+                          child: Text(
+                            isScanning
+                                ? "Scannez le QR code d'un participant"
+                                : "En attente...",
+                            style: const TextStyle(
+                              fontFamily: 'CenturyGothic',
+                              fontSize: 18,
+                              color: Color(0xFF0E6655),
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 20),
-                  Expanded(
-                    child: Center(
+                    const SizedBox(height: 20),
+                    Center(
                       child: cameraPermissionGranted
                           ? Container(
                               width: 300,
                               height: 300,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Color(0xFF0E6655), width: 2),
+                                border: Border.all(
+                                    color: const Color(0xFF0E6655), width: 2),
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(18),
@@ -536,12 +774,15 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                                   key: qrKey,
                                   onQRViewCreated: _onQRViewCreated,
                                   overlay: QrScannerOverlayShape(
-                                    borderColor: Color(0xFF0E6655),
+                                    borderColor: const Color(0xFF0E6655),
                                     borderRadius: 10,
                                     borderLength: 30,
                                     borderWidth: 10,
                                     cutOutSize: 250,
                                   ),
+                                  formatsAllowed: const [
+                                    BarcodeFormat.qrcode
+                                  ], // Restriction aux QR codes uniquement
                                 ),
                               ),
                             )
@@ -552,7 +793,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                                 borderRadius: BorderRadius.circular(20),
                                 color: Colors.grey.withOpacity(0.2),
                               ),
-                              child: Center(
+                              child: const Center(
                                 child: Text(
                                   "Permission caméra requise",
                                   style: TextStyle(
@@ -564,9 +805,9 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                               ),
                             ),
                     ),
-                  ),
-                  SizedBox(height: 20),
-                ],
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           ],
@@ -579,7 +820,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
 class AnimatedBackground extends StatefulWidget {
   final AnimationController controller;
 
-  AnimatedBackground({required this.controller});
+  const AnimatedBackground({required this.controller});
 
   @override
   _AnimatedBackgroundState createState() => _AnimatedBackgroundState();
@@ -593,19 +834,27 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
   void initState() {
     super.initState();
     shapes = [
-      _buildShape(100, 50, 0.5, Color(0xFFA2D9CE).withOpacity(0.5), 0),
-      _buildShape(80, 150, 0.7, Color(0xFFA2D9CE).withOpacity(0.4), math.pi / 4),
-      _buildShape(120, 250, 0.6, Color(0xFFA2D9CE).withOpacity(0.5), math.pi / 2),
+      _buildShape(
+          100, 50, 0.5, const Color(0xFFA2D9CE).withOpacity(0.5), 0),
+      _buildShape(80, 150, 0.7, const Color(0xFFA2D9CE).withOpacity(0.4),
+          math.pi / 4),
+      _buildShape(120, 250, 0.6, const Color(0xFFA2D9CE).withOpacity(0.5),
+          math.pi / 2),
     ];
   }
 
-  Widget _buildShape(double size, double top, double opacity, Color color, double initialAngle) {
+  Widget _buildShape(
+      double size, double top, double opacity, Color color, double initialAngle) {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
         return Positioned(
-          top: top + (50 * math.sin(widget.controller.value + initialAngle)).toDouble(),
-          left: 20 + (50 * math.cos(widget.controller.value + initialAngle)).toDouble(),
+          top: top +
+              (50 * math.sin(widget.controller.value + initialAngle))
+                  .toDouble(),
+          left: 20 +
+              (50 * math.cos(widget.controller.value + initialAngle))
+                  .toDouble(),
           child: Transform.rotate(
             angle: widget.controller.value * 2 * math.pi + initialAngle,
             child: Container(
