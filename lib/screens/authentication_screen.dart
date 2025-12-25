@@ -192,16 +192,6 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                             )
                                           else
                                             _buildLoadingView(),
-                                          
-                                          // Overlay seulement si pas d'erreur
-                                          if (!hasError)
-                                            QRScannerOverlay(
-                                              borderColor: const Color(0xFF0E6655),
-                                              borderRadius: 8,
-                                              borderLength: 20,
-                                              borderWidth: 6,
-                                              cutOutSize: 230,
-                                            ),
                                         ],
                                       ),
                                     ),
@@ -600,94 +590,6 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       },
     );
   }
-}
-
-// Overlay personnalisé (inchangé)
-class QRScannerOverlay extends StatelessWidget {
-  final Color borderColor;
-  final double borderRadius;
-  final double borderLength;
-  final double borderWidth;
-  final double cutOutSize;
-
-  const QRScannerOverlay({
-    Key? key,
-    required this.borderColor,
-    required this.borderRadius,
-    required this.borderLength,
-    required this.borderWidth,
-    required this.cutOutSize,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _QRScannerOverlayPainter(
-        borderColor: borderColor,
-        borderRadius: borderRadius,
-        borderLength: borderLength,
-        borderWidth: borderWidth,
-        cutOutSize: cutOutSize,
-      ),
-    );
-  }
-}
-
-class _QRScannerOverlayPainter extends CustomPainter {
-  final Color borderColor;
-  final double borderRadius;
-  final double borderLength;
-  final double borderWidth;
-  final double cutOutSize;
-
-  _QRScannerOverlayPainter({
-    required this.borderColor,
-    required this.borderRadius,
-    required this.borderLength,
-    required this.borderWidth,
-    required this.cutOutSize,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = borderWidth;
-
-    final path = Path();
-    final rect = Rect.fromLTWH(
-      (size.width - cutOutSize) / 2,
-      (size.height - cutOutSize) / 2,
-      cutOutSize,
-      cutOutSize,
-    );
-
-    path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(borderRadius)));
-
-    final cornerLength = borderLength;
-
-    path.moveTo(rect.left, rect.top + cornerLength);
-    path.lineTo(rect.left, rect.top);
-    path.lineTo(rect.left + cornerLength, rect.top);
-
-    path.moveTo(rect.right - cornerLength, rect.top);
-    path.lineTo(rect.right, rect.top);
-    path.lineTo(rect.right, rect.top + cornerLength);
-
-    path.moveTo(rect.right, rect.bottom - cornerLength);
-    path.lineTo(rect.right, rect.bottom);
-    path.lineTo(rect.right - cornerLength, rect.bottom);
-
-    path.moveTo(rect.left + cornerLength, rect.bottom);
-    path.lineTo(rect.left, rect.bottom);
-    path.lineTo(rect.left, rect.bottom - cornerLength);
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class AnimatedBackground extends StatefulWidget {
