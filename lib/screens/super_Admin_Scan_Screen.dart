@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
@@ -19,8 +19,7 @@ class SuperAdminScanScreen extends StatefulWidget {
 
 class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
     with TickerProviderStateMixin {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  QRViewController? controller;
+  MobileScannerController controller = MobileScannerController();
   bool isScanning = true;
   bool cameraPermissionGranted = false;
   late AnimationController _backgroundController;
@@ -37,8 +36,8 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
 
   @override
   void dispose() {
-    controller?.pauseCamera();
-    controller?.dispose();
+    controller.stop();
+    controller.dispose();
     _backgroundController.dispose();
     super.dispose();
   }
@@ -83,27 +82,6 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
     );
   }
 
-  void _onQRViewCreated(QRViewController controller) {
-    if (!mounted) return;
-    setState(() {
-      this.controller = controller;
-    });
-    print("QRViewController créé");
-    controller.scannedDataStream.listen((scanData) async {
-      if (!isScanning || !mounted) return;
-
-      setState(() => isScanning = false);
-      print("Code scanné : ${scanData.code}");
-      await _handleQRCode(scanData.code);
-      if (mounted) {
-        controller.pauseCamera();
-      }
-    }, onError: (error) {
-      print("Erreur dans le flux de scan : $error");
-      _showErrorDialog("Erreur de scan : $error", null, null);
-    });
-  }
-
   Future<void> _handleQRCode(String? qrCode) async {
     if (qrCode == null) {
       _showErrorDialog("Code QR invalide", null, null);
@@ -117,7 +95,6 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
       String? email;
       String? userIdFromQr;
 
-      // Vérifier si le QR code est une chaîne JSON valide
       try {
         qrData = jsonDecode(qrCode) as Map<String, dynamic>;
         email = qrData['email'] as String?;
@@ -132,7 +109,6 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
         return;
       }
 
-      // Vérifier que les champs email et userId sont présents
       if (email == null || userIdFromQr == null) {
         _showErrorDialog(
           "Le QR code doit contenir un email et un userId",
@@ -142,7 +118,6 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
         return;
       }
 
-      // Rechercher l'utilisateur dans Firestore avec l'email
       final userQuery = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isEqualTo: email)
@@ -158,7 +133,6 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
       final userId = userDoc.id;
       final userData = userDoc.data() as Map<String, dynamic>;
 
-      // Vérifier que l'userId du QR code correspond à l'utilisateur trouvé
       if (userId != userIdFromQr) {
         _showErrorDialog(
           "L'userId du QR code ne correspond pas à l'utilisateur trouvé",
@@ -168,7 +142,6 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
         return;
       }
 
-      // Récupérer le rôle de l'utilisateur
       final roleId = userData['roleId'] as String?;
       print("RoleId de l'utilisateur : $roleId");
 
@@ -191,7 +164,6 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
         print("RoleId absent, utilisation du champ role : $roleName");
       }
 
-      // Récupérer les données de l'événement
       final eventDoc = await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.eventId)
@@ -360,7 +332,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       Navigator.pop(context);
                       if (mounted) {
                         setState(() => isScanning = true);
-                        controller?.resumeCamera();
+                        controller.start(); // Reprend la caméra
                       }
                     },
                     child: Container(
@@ -499,7 +471,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       Navigator.pop(context);
                       if (mounted) {
                         setState(() => isScanning = true);
-                        controller?.resumeCamera();
+                        controller.start(); // Reprend la caméra
                       }
                     },
                     child: Container(
@@ -629,7 +601,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       Navigator.pop(context);
                       if (mounted) {
                         setState(() => isScanning = true);
-                        controller?.resumeCamera();
+                        controller.start(); // Reprend la caméra
                       }
                     },
                     child: Container(
@@ -770,19 +742,31 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(18),
-                                child: QRView(
-                                  key: qrKey,
-                                  onQRViewCreated: _onQRViewCreated,
-                                  overlay: QrScannerOverlayShape(
-                                    borderColor: const Color(0xFF0E6655),
-                                    borderRadius: 10,
-                                    borderLength: 30,
-                                    borderWidth: 10,
-                                    cutOutSize: 250,
-                                  ),
-                                  formatsAllowed: const [
-                                    BarcodeFormat.qrcode
-                                  ], // Restriction aux QR codes uniquement
+                                child: Stack(
+                                  children: [
+                                    MobileScanner(
+                                      controller: controller,
+                                      onDetect: (BarcodeCapture capture) async {
+                                        final List<Barcode> barcodes = capture.barcodes;
+                                        if (barcodes.isNotEmpty && isScanning && mounted) {
+                                          final String? code = barcodes.first.rawValue;
+                                          if (code != null) {
+                                            setState(() => isScanning = false);
+                                            await _handleQRCode(code);
+                                            controller.stop();
+                                          }
+                                        }
+                                      },
+                                    ),
+                                    // Overlay personnalisé (coins verts identiques à ton ancien design)
+                                    QRScannerOverlay(
+                                      borderColor: const Color(0xFF0E6655),
+                                      borderRadius: 10,
+                                      borderLength: 30,
+                                      borderWidth: 10,
+                                      cutOutSize: 250,
+                                    ),
+                                  ],
                                 ),
                               ),
                             )
@@ -815,6 +799,94 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
       ),
     );
   }
+}
+
+// Overlay personnalisé (identique à ton ancien QrScannerOverlayShape)
+class QRScannerOverlay extends StatelessWidget {
+  final Color borderColor;
+  final double borderRadius;
+  final double borderLength;
+  final double borderWidth;
+  final double cutOutSize;
+
+  const QRScannerOverlay({
+    Key? key,
+    required this.borderColor,
+    required this.borderRadius,
+    required this.borderLength,
+    required this.borderWidth,
+    required this.cutOutSize,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _QRScannerOverlayPainter(
+        borderColor: borderColor,
+        borderRadius: borderRadius,
+        borderLength: borderLength,
+        borderWidth: borderWidth,
+        cutOutSize: cutOutSize,
+      ),
+    );
+  }
+}
+
+class _QRScannerOverlayPainter extends CustomPainter {
+  final Color borderColor;
+  final double borderRadius;
+  final double borderLength;
+  final double borderWidth;
+  final double cutOutSize;
+
+  _QRScannerOverlayPainter({
+    required this.borderColor,
+    required this.borderRadius,
+    required this.borderLength,
+    required this.borderWidth,
+    required this.cutOutSize,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = borderWidth;
+
+    final path = Path();
+    final rect = Rect.fromLTWH(
+      (size.width - cutOutSize) / 2,
+      (size.height - cutOutSize) / 2,
+      cutOutSize,
+      cutOutSize,
+    );
+
+    path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(borderRadius)));
+
+    final cornerLength = borderLength;
+
+    path.moveTo(rect.left, rect.top + cornerLength);
+    path.lineTo(rect.left, rect.top);
+    path.lineTo(rect.left + cornerLength, rect.top);
+
+    path.moveTo(rect.right - cornerLength, rect.top);
+    path.lineTo(rect.right, rect.top);
+    path.lineTo(rect.right, rect.top + cornerLength);
+
+    path.moveTo(rect.right, rect.bottom - cornerLength);
+    path.lineTo(rect.right, rect.bottom);
+    path.lineTo(rect.right - cornerLength, rect.bottom);
+
+    path.moveTo(rect.left + cornerLength, rect.bottom);
+    path.lineTo(rect.left, rect.bottom);
+    path.lineTo(rect.left, rect.bottom - cornerLength);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class AnimatedBackground extends StatefulWidget {

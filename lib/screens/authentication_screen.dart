@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:Evenvo_Mobile/screens/event_selection_screen.dart';
 import 'package:Evenvo_Mobile/screens/authentification_choix_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,11 +18,9 @@ class AuthenticationScreen extends StatefulWidget {
 
 class _AuthenticationScreenState extends State<AuthenticationScreen>
     with TickerProviderStateMixin {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  QRViewController? controller;
+  MobileScannerController controller = MobileScannerController();
   bool isProcessing = false;
   bool cameraPermissionGranted = false;
-
   late AnimationController _backgroundController;
 
   @override
@@ -35,7 +33,6 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     _checkCameraPermission();
   }
 
-  // Vérifier les permissions de la caméra
   Future<void> _checkCameraPermission() async {
     final status = await Permission.camera.request();
     if (status.isGranted) {
@@ -76,25 +73,19 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     );
   }
 
-  // Transition moderne avec fondu et mise à l'échelle
   Route _createModernRoute(Widget destination) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => destination,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        const beginScale = 0.95; // Légère réduction initiale
-        const endScale = 1.0; // Taille normale
+        const beginScale = 0.95;
+        const endScale = 1.0;
         const curve = Curves.easeInOut;
-
-        // Animation de mise à l'échelle
         var scaleTween = Tween<double>(begin: beginScale, end: endScale)
             .chain(CurveTween(curve: curve));
         var scaleAnimation = animation.drive(scaleTween);
-
-        // Animation de fondu
         var fadeTween = Tween<double>(begin: 0.0, end: 1.0)
             .chain(CurveTween(curve: curve));
         var fadeAnimation = animation.drive(fadeTween);
-
         return ScaleTransition(
           scale: scaleAnimation,
           child: FadeTransition(
@@ -120,8 +111,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(
-                        top: 8.0, left: 16.0, right: 16.0),
+                    padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -151,8 +141,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFd9f9ef)
-                                        .withOpacity(0.1),
+                                    color: const Color(0xFFd9f9ef).withOpacity(0.1),
                                     blurRadius: 20,
                                     spreadRadius: 5,
                                   ),
@@ -173,22 +162,34 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                   const SizedBox(height: 20),
                                   cameraPermissionGranted
                                       ? ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(12),
                                           child: SizedBox(
                                             width: 250,
                                             height: 250,
-                                            child: QRView(
-                                              key: qrKey,
-                                              onQRViewCreated: _onQRViewCreated,
-                                              overlay: QrScannerOverlayShape(
-                                                borderColor:
-                                                    const Color(0xFF0E6655),
-                                                borderRadius: 8,
-                                                borderLength: 20,
-                                                borderWidth: 6,
-                                                cutOutSize: 230,
-                                              ),
+                                            child: Stack(
+                                              children: [
+                                                MobileScanner(
+                                                  controller: controller,
+                                                  onDetect: (BarcodeCapture capture) async {
+                                                    final List<Barcode> barcodes = capture.barcodes;
+                                                    if (barcodes.isNotEmpty && !isProcessing) {
+                                                      final String? code = barcodes.first.rawValue;
+                                                      if (code != null) {
+                                                        isProcessing = true;
+                                                        await _handleScannedCode(code, context);
+                                                      }
+                                                    }
+                                                  },
+                                                ),
+                                                // Overlay personnalisé identique à ton ancien design
+                                                QRScannerOverlay(
+                                                  borderColor: const Color(0xFF0E6655),
+                                                  borderRadius: 8,
+                                                  borderLength: 20,
+                                                  borderWidth: 6,
+                                                  cutOutSize: 230,
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         )
@@ -196,8 +197,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                           width: 250,
                                           height: 250,
                                           decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(12),
                                             color: Colors.grey.withOpacity(0.2),
                                           ),
                                           child: const Center(
@@ -214,18 +214,15 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                   const SizedBox(height: 16),
                                   TextButton(
                                     onPressed: () {
-                                      // Utiliser la transition moderne pour le retour
                                       Navigator.pushReplacement(
                                         context,
-                                        _createModernRoute(
-                                            AuthentificationChoixScreen()),
+                                        _createModernRoute(AuthentificationChoixScreen()),
                                       );
                                     },
                                     child: Text(
                                       'Retour',
                                       style: TextStyle(
-                                        color: Color(0xFF0E6655)
-                                            .withOpacity(0.8),
+                                        color: Color(0xFF0E6655).withOpacity(0.8),
                                         fontSize: 16,
                                       ),
                                     ),
@@ -247,24 +244,11 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     );
   }
 
-  void _onQRViewCreated(QRViewController controller) {
-    setState(() => this.controller = controller);
-    controller.scannedDataStream.listen((scanData) async {
-      if (!isProcessing && scanData.code != null) {
-        isProcessing = true;
-        await _handleScannedCode(scanData.code!, context);
-      }
-    }, onError: (error) {
-      print("Erreur dans le flux de scan : $error");
-      _showErrorDialog("Erreur de scan : $error", null);
-    });
-  }
-
   Future<void> _handleScannedCode(String scannedCode, BuildContext context) async {
-    controller?.pauseCamera();
+    await controller.stop(); // Stop la caméra
     try {
       final qrData = jsonDecode(scannedCode);
-      print('QR Data: $qrData'); // Débogage
+      print('QR Data: $qrData');
 
       final userSnapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -275,14 +259,13 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
       if (userSnapshot.docs.isNotEmpty) {
         final userData = userSnapshot.docs.first.data();
-        print('User Data: $userData'); // Débogage
+        print('User Data: $userData');
 
         final roleName = qrData['role'];
         if (roleName == null) {
           _showErrorDialog("Aucun rôle spécifié dans le QR code", userData);
           return;
         }
-        print('Role Name from QR: $roleName'); // Débogage
 
         final roleSnapshot = await FirebaseFirestore.instance
             .collection('roles')
@@ -292,10 +275,10 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
         if (roleSnapshot.docs.isNotEmpty) {
           final roleData = roleSnapshot.docs.first.data();
-          print('Role Data: $roleData'); // Débogage
+          print('Role Data: $roleData');
 
           if (roleData['MobileAccessGlobal'] == true) {
-            await FirebaseAuth.instance.signInAnonymously(); // Connexion anonyme activée
+            await FirebaseAuth.instance.signInAnonymously();
             _showSuccessDialog(userData, roleName);
           } else {
             _showErrorDialog(
@@ -303,16 +286,15 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
           }
         } else {
           _showErrorDialog("Rôle non trouvé dans la base", userData);
-          print('No role found for name: $roleName'); // Débogage
+          print('No role found for name: $roleName');
         }
       } else {
         _showErrorDialog("Cet utilisateur n'existe pas en base", null);
-        print(
-            'No user found for name: ${qrData['name']}, surname: ${qrData['surname']}'); // Débogage
+        print('No user found for name: ${qrData['name']}, surname: ${qrData['surname']}');
       }
     } catch (e) {
       _showErrorDialog("Problème avec le QR code: $e", null);
-      print('Error: $e'); // Débogage
+      print('Error: $e');
     } finally {
       isProcessing = false;
     }
@@ -360,8 +342,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.check_circle,
-                      color: Color(0xFF0E6655), size: 60),
+                  const Icon(Icons.check_circle, color: Color(0xFF0E6655), size: 60),
                   const SizedBox(height: 20),
                   const Text(
                     "Bienvenue !",
@@ -396,7 +377,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                     onTap: () {
                       Navigator.pop(context);
                       _navigateToEventSelection(userData);
-                      controller?.resumeCamera();
+                      controller.start(); // Reprend la caméra
                     },
                     child: Container(
                       width: double.infinity,
@@ -512,7 +493,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
-                      controller?.resumeCamera();
+                      controller.start(); // Reprend la caméra
                     },
                     child: Container(
                       width: double.infinity,
@@ -550,15 +531,102 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
   @override
   void dispose() {
-    controller?.dispose();
+    controller.dispose();
     _backgroundController.dispose();
     super.dispose();
   }
 }
 
+// Overlay personnalisé (identique à ton ancien QrScannerOverlayShape)
+class QRScannerOverlay extends StatelessWidget {
+  final Color borderColor;
+  final double borderRadius;
+  final double borderLength;
+  final double borderWidth;
+  final double cutOutSize;
+
+  const QRScannerOverlay({
+    Key? key,
+    required this.borderColor,
+    required this.borderRadius,
+    required this.borderLength,
+    required this.borderWidth,
+    required this.cutOutSize,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _QRScannerOverlayPainter(
+        borderColor: borderColor,
+        borderRadius: borderRadius,
+        borderLength: borderLength,
+        borderWidth: borderWidth,
+        cutOutSize: cutOutSize,
+      ),
+    );
+  }
+}
+
+class _QRScannerOverlayPainter extends CustomPainter {
+  final Color borderColor;
+  final double borderRadius;
+  final double borderLength;
+  final double borderWidth;
+  final double cutOutSize;
+
+  _QRScannerOverlayPainter({
+    required this.borderColor,
+    required this.borderRadius,
+    required this.borderLength,
+    required this.borderWidth,
+    required this.cutOutSize,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = borderWidth;
+
+    final path = Path();
+    final rect = Rect.fromLTWH(
+      (size.width - cutOutSize) / 2,
+      (size.height - cutOutSize) / 2,
+      cutOutSize,
+      cutOutSize,
+    );
+
+    path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(borderRadius)));
+
+    final cornerLength = borderLength;
+
+    path.moveTo(rect.left, rect.top + cornerLength);
+    path.lineTo(rect.left, rect.top);
+    path.lineTo(rect.left + cornerLength, rect.top);
+
+    path.moveTo(rect.right - cornerLength, rect.top);
+    path.lineTo(rect.right, rect.top);
+    path.lineTo(rect.right, rect.top + cornerLength);
+
+    path.moveTo(rect.right, rect.bottom - cornerLength);
+    path.lineTo(rect.right, rect.bottom);
+    path.lineTo(rect.right - cornerLength, rect.bottom);
+
+    path.moveTo(rect.left + cornerLength, rect.bottom);
+    path.lineTo(rect.left, rect.bottom);
+    path.lineTo(rect.left, rect.bottom - cornerLength);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class AnimatedBackground extends StatefulWidget {
   final AnimationController controller;
-
   const AnimatedBackground({required this.controller});
 
   @override

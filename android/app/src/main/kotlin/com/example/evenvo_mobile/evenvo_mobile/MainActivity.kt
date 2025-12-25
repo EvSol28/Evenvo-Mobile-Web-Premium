@@ -1,4 +1,4 @@
-package com.example.evenvo_mobile
+package com.evenvo.app
 
 import io.flutter.embedding.android.FlutterActivity
 
