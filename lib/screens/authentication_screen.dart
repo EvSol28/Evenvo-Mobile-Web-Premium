@@ -7,6 +7,7 @@ import 'package:Evenvo_Mobile/screens/event_selection_screen.dart';
 import 'package:Evenvo_Mobile/screens/authentification_choix_screen.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 
 class AuthenticationScreen extends StatefulWidget {
   const AuthenticationScreen({super.key});
@@ -17,14 +18,11 @@ class AuthenticationScreen extends StatefulWidget {
 
 class _AuthenticationScreenState extends State<AuthenticationScreen>
     with TickerProviderStateMixin {
-  MobileScannerController controller = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates,
-    facing: CameraFacing.back,
-    torchEnabled: false,
-  );
-
+  MobileScannerController? controller;
   bool isProcessing = false;
-  bool isScannerReady = false; // Pour le loader au démarrage
+  bool isScannerReady = false;
+  bool hasError = false;
+  String? errorMessage;
   late AnimationController _backgroundController;
 
   @override
@@ -35,19 +33,44 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       vsync: this,
     )..repeat();
 
-    // Loader pendant 800ms puis la caméra démarre automatiquement
-    Future.delayed(const Duration(milliseconds: 800), () {
+    _initializeScanner();
+  }
+
+  void _initializeScanner() async {
+    try {
+      // Configuration spécifique pour le web
+      controller = MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        facing: CameraFacing.back,
+        torchEnabled: false,
+        returnImage: false, // Important pour les performances web
+        formats: [BarcodeFormat.qrCode], // Limiter aux QR codes seulement
+      );
+
+      // Délai pour l'initialisation
+      await Future.delayed(const Duration(milliseconds: 1200));
+      
       if (mounted) {
         setState(() {
           isScannerReady = true;
+          hasError = false;
         });
       }
-    });
+    } catch (e) {
+      print('Erreur initialisation scanner: $e');
+      if (mounted) {
+        setState(() {
+          hasError = true;
+          errorMessage = 'Impossible d\'accéder à la caméra. Vérifiez les permissions.';
+          isScannerReady = false;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    controller?.dispose();
     _backgroundController.dispose();
     super.dispose();
   }
@@ -146,51 +169,38 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                       borderRadius: BorderRadius.circular(18),
                                       child: Stack(
                                         children: [
-                                          MobileScanner(
-                                            controller: controller,
-                                            onDetect: (BarcodeCapture capture) async {
-                                              final List<Barcode> barcodes = capture.barcodes;
-                                              if (barcodes.isNotEmpty && !isProcessing) {
-                                                final String? code = barcodes.first.rawValue;
-                                                if (code != null) {
-                                                  isProcessing = true;
-                                                  await _handleScannedCode(code, context);
+                                          // Scanner ou message d'erreur
+                                          if (hasError)
+                                            _buildErrorView()
+                                          else if (isScannerReady && controller != null)
+                                            MobileScanner(
+                                              controller: controller!,
+                                              onDetect: (BarcodeCapture capture) async {
+                                                if (!isProcessing) {
+                                                  final List<Barcode> barcodes = capture.barcodes;
+                                                  if (barcodes.isNotEmpty) {
+                                                    final String? code = barcodes.first.rawValue;
+                                                    if (code != null && code.isNotEmpty) {
+                                                      setState(() {
+                                                        isProcessing = true;
+                                                      });
+                                                      await _handleScannedCode(code, context);
+                                                    }
+                                                  }
                                                 }
-                                              }
-                                            },
-                                          ),
-                                          QRScannerOverlay(
-                                            borderColor: const Color(0xFF0E6655),
-                                            borderRadius: 8,
-                                            borderLength: 20,
-                                            borderWidth: 6,
-                                            cutOutSize: 230,
-                                          ),
-                                          // Loader élégant au démarrage (comme Zara, H&M...)
-                                          if (!isScannerReady)
-                                            Container(
-                                              color: Colors.black.withOpacity(0.8),
-                                              child: const Center(
-                                                child: Column(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    CircularProgressIndicator(
-                                                      color: Color(0xFF0E6655),
-                                                      strokeWidth: 6,
-                                                    ),
-                                                    SizedBox(height: 24),
-                                                    Text(
-                                                      "Activation de la caméra...",
-                                                      style: TextStyle(
-                                                        fontFamily: 'CenturyGothic',
-                                                        color: Colors.white,
-                                                        fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
+                                              },
+                                            )
+                                          else
+                                            _buildLoadingView(),
+                                          
+                                          // Overlay seulement si pas d'erreur
+                                          if (!hasError)
+                                            QRScannerOverlay(
+                                              borderColor: const Color(0xFF0E6655),
+                                              borderRadius: 8,
+                                              borderLength: 20,
+                                              borderWidth: 6,
+                                              cutOutSize: 230,
                                             ),
                                         ],
                                       ),
@@ -229,8 +239,82 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     );
   }
 
+  Widget _buildLoadingView() {
+    return Container(
+      color: Colors.black.withOpacity(0.8),
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(
+              color: Color(0xFF0E6655),
+              strokeWidth: 6,
+            ),
+            SizedBox(height: 24),
+            Text(
+              "Activation de la caméra...",
+              style: TextStyle(
+                fontFamily: 'CenturyGothic',
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Container(
+      color: Colors.red.withOpacity(0.1),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.camera_alt_outlined,
+              color: Colors.red,
+              size: 60,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              errorMessage ?? 'Erreur caméra',
+              style: const TextStyle(
+                fontFamily: 'CenturyGothic',
+                color: Colors.red,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  hasError = false;
+                  isScannerReady = false;
+                });
+                _initializeScanner();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0E6655),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleScannedCode(String scannedCode, BuildContext context) async {
-    await controller.stop();
+    if (controller != null) {
+      await controller!.stop();
+    }
+    
     try {
       final qrData = jsonDecode(scannedCode);
       print('QR Data: $qrData');
@@ -281,7 +365,9 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       _showErrorDialog("Problème avec le QR code: $e", null);
       print('Error: $e');
     } finally {
-      isProcessing = false;
+      setState(() {
+        isProcessing = false;
+      });
     }
   }
 
@@ -362,7 +448,6 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                     onTap: () {
                       Navigator.pop(context);
                       _navigateToEventSelection(userData);
-                      controller.start(); // Reprend la caméra après succès
                     },
                     child: Container(
                       width: double.infinity,
@@ -478,7 +563,9 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
-                      controller.start(); // Reprend la caméra après erreur
+                      if (controller != null) {
+                        controller!.start(); // Reprend la caméra après erreur
+                      }
                     },
                     child: Container(
                       width: double.infinity,
