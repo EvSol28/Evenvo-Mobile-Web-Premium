@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:Evenvo_Mobile/screens/event_selection_screen.dart';
 import 'package:Evenvo_Mobile/screens/authentification_choix_screen.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
@@ -18,9 +17,14 @@ class AuthenticationScreen extends StatefulWidget {
 
 class _AuthenticationScreenState extends State<AuthenticationScreen>
     with TickerProviderStateMixin {
-  MobileScannerController controller = MobileScannerController();
+  MobileScannerController controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    facing: CameraFacing.back,
+    torchEnabled: false,
+  );
+
   bool isProcessing = false;
-  bool cameraPermissionGranted = false;
+  bool isScannerReady = false; // Pour le loader au démarrage
   late AnimationController _backgroundController;
 
   @override
@@ -30,96 +34,22 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat();
-    _requestCameraPermission();
+
+    // Loader pendant 800ms puis la caméra démarre automatiquement
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          isScannerReady = true;
+        });
+      }
+    });
   }
 
-  // Demande la permission dès l'ouverture de la page + popup si besoin
-Future<void> _requestCameraPermission() async {
-  // On affiche TOUJOURS le popup explicatif au démarrage de la page
-  // pour être sûr que l'utilisateur voit le message clair et appuie sur le bouton
-  if (mounted) {
-    _showCameraPermissionPopup();
-  }
-}
-
-  // Popup personnalisé pour demander la permission
-  void _showCameraPermissionPopup() {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // L'utilisateur doit choisir
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white.withOpacity(0.95),
-        title: const Text(
-          "Accès à la caméra requis",
-          style: TextStyle(
-            fontFamily: 'CenturyGothic',
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF0E6655),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        content: const Text(
-          "Pour scanner les QR codes, cette application a besoin d'accéder à votre caméra.\n\nAppuyez sur \"Autoriser la caméra\" pour continuer.",
-          style: TextStyle(
-            fontFamily: 'CenturyGothic',
-            fontSize: 16,
-            color: Color(0xFF0E6655),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context); // Ferme le popup
-              final status = await Permission.camera.request();
-              if (status.isGranted) {
-                setState(() {
-                  cameraPermissionGranted = true;
-                });
-              } else {
-                // Si refusé, montre le dialog classique avec ouverture paramètres
-                _showPermissionDeniedDialog();
-              }
-            },
-            child: const Text(
-              "Autoriser la caméra",
-              style: TextStyle(
-                fontFamily: 'CenturyGothic',
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0E6655),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPermissionDeniedDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Permission refusée"),
-        content: const Text(
-            "Vous avez refusé l'accès à la caméra. Pour scanner les QR codes, veuillez l'autoriser dans les paramètres."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            child: const Text("Ouvrir les paramètres"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Annuler"),
-          ),
-        ],
-      ),
-    );
+  @override
+  void dispose() {
+    controller.dispose();
+    _backgroundController.dispose();
+    super.dispose();
   }
 
   Route _createModernRoute(Widget destination) {
@@ -209,58 +139,64 @@ Future<void> _requestCameraPermission() async {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  cameraPermissionGranted
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: SizedBox(
-                                            width: 250,
-                                            height: 250,
-                                            child: Stack(
-                                              children: [
-                                                MobileScanner(
-                                                  controller: controller,
-                                                  onDetect: (BarcodeCapture capture) async {
-                                                    final List<Barcode> barcodes = capture.barcodes;
-                                                    if (barcodes.isNotEmpty && !isProcessing) {
-                                                      final String? code = barcodes.first.rawValue;
-                                                      if (code != null) {
-                                                        isProcessing = true;
-                                                        await _handleScannedCode(code, context);
-                                                      }
-                                                    }
-                                                  },
-                                                ),
-                                                QRScannerOverlay(
-                                                  borderColor: const Color(0xFF0E6655),
-                                                  borderRadius: 8,
-                                                  borderLength: 20,
-                                                  borderWidth: 6,
-                                                  cutOutSize: 230,
-                                                ),
-                                              ],
-                                            ),
+                                  SizedBox(
+                                    width: 300,
+                                    height: 300,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(18),
+                                      child: Stack(
+                                        children: [
+                                          MobileScanner(
+                                            controller: controller,
+                                            onDetect: (BarcodeCapture capture) async {
+                                              final List<Barcode> barcodes = capture.barcodes;
+                                              if (barcodes.isNotEmpty && !isProcessing) {
+                                                final String? code = barcodes.first.rawValue;
+                                                if (code != null) {
+                                                  isProcessing = true;
+                                                  await _handleScannedCode(code, context);
+                                                }
+                                              }
+                                            },
                                           ),
-                                        )
-                                      : Container(
-                                          width: 250,
-                                          height: 250,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(12),
-                                            color: Colors.grey.withOpacity(0.2),
+                                          QRScannerOverlay(
+                                            borderColor: const Color(0xFF0E6655),
+                                            borderRadius: 8,
+                                            borderLength: 20,
+                                            borderWidth: 6,
+                                            cutOutSize: 230,
                                           ),
-                                          child: const Center(
-                                            child: Text(
-                                              "Permission caméra requise",
-                                              style: TextStyle(
-                                                fontFamily: 'CenturyGothic',
-                                                color: Color(0xFF0E6655),
-                                                fontSize: 18,
+                                          // Loader élégant au démarrage (comme Zara, H&M...)
+                                          if (!isScannerReady)
+                                            Container(
+                                              color: Colors.black.withOpacity(0.8),
+                                              child: const Center(
+                                                child: Column(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    CircularProgressIndicator(
+                                                      color: Color(0xFF0E6655),
+                                                      strokeWidth: 6,
+                                                    ),
+                                                    SizedBox(height: 24),
+                                                    Text(
+                                                      "Activation de la caméra...",
+                                                      style: TextStyle(
+                                                        fontFamily: 'CenturyGothic',
+                                                        color: Colors.white,
+                                                        fontSize: 18,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                              textAlign: TextAlign.center,
                                             ),
-                                          ),
-                                        ),
-                                  const SizedBox(height: 16),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
                                   TextButton(
                                     onPressed: () {
                                       Navigator.pushReplacement(
@@ -426,7 +362,7 @@ Future<void> _requestCameraPermission() async {
                     onTap: () {
                       Navigator.pop(context);
                       _navigateToEventSelection(userData);
-                      controller.start();
+                      controller.start(); // Reprend la caméra après succès
                     },
                     child: Container(
                       width: double.infinity,
@@ -542,7 +478,7 @@ Future<void> _requestCameraPermission() async {
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
-                      controller.start();
+                      controller.start(); // Reprend la caméra après erreur
                     },
                     child: Container(
                       width: double.infinity,
@@ -577,16 +513,9 @@ Future<void> _requestCameraPermission() async {
       },
     );
   }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    _backgroundController.dispose();
-    super.dispose();
-  }
 }
 
-// Overlay personnalisé
+// Overlay personnalisé (inchangé)
 class QRScannerOverlay extends StatelessWidget {
   final Color borderColor;
   final double borderRadius;
