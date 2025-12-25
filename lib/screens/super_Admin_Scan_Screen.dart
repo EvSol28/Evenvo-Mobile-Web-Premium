@@ -31,7 +31,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
       duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat();
-    _checkCameraPermission();
+    _requestCameraPermission();
   }
 
   @override
@@ -42,29 +42,78 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
     super.dispose();
   }
 
-  Future<void> _checkCameraPermission() async {
-    final status = await Permission.camera.request();
-    if (status.isGranted) {
-      setState(() {
-        cameraPermissionGranted = true;
-      });
-      print("Permission caméra accordée");
-    } else {
-      setState(() {
-        cameraPermissionGranted = false;
-      });
-      print("Permission caméra refusée");
-      _showPermissionDeniedDialog();
-    }
+  // Demande la permission dès l'ouverture + popup si besoin
+Future<void> _requestCameraPermission() async {
+  // On affiche TOUJOURS le popup explicatif au démarrage de la page
+  // pour être sûr que l'utilisateur voit le message clair et appuie sur le bouton
+  if (mounted) {
+    _showCameraPermissionPopup();
+  }
+}
+
+  // Popup personnalisé pour demander la permission
+  void _showCameraPermissionPopup() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Oblige l'utilisateur à choisir
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white.withOpacity(0.95),
+        title: const Text(
+          "Accès à la caméra requis",
+          style: TextStyle(
+            fontFamily: 'CenturyGothic',
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0E6655),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          "Pour scanner les QR codes des participants, cette application a besoin d'accéder à votre caméra.\n\nAppuyez sur \"Autoriser la caméra\" pour continuer.",
+          style: TextStyle(
+            fontFamily: 'CenturyGothic',
+            fontSize: 16,
+            color: Color(0xFF0E6655),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Ferme le popup
+              final status = await Permission.camera.request();
+              if (status.isGranted) {
+                setState(() {
+                  cameraPermissionGranted = true;
+                });
+              } else {
+                // Si refusé, montre le dialog avec ouverture paramètres
+                _showPermissionDeniedDialog();
+              }
+            },
+            child: const Text(
+              "Autoriser la caméra",
+              style: TextStyle(
+                fontFamily: 'CenturyGothic',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0E6655),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showPermissionDeniedDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Permission requise"),
+        title: const Text("Permission refusée"),
         content: const Text(
-            "L'accès à la caméra est nécessaire pour scanner les QR codes."),
+            "Vous avez refusé l'accès à la caméra. Pour scanner les QR codes, veuillez l'autoriser dans les paramètres."),
         actions: [
           TextButton(
             onPressed: () {
@@ -332,7 +381,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       Navigator.pop(context);
                       if (mounted) {
                         setState(() => isScanning = true);
-                        controller.start(); // Reprend la caméra
+                        controller.start();
                       }
                     },
                     child: Container(
@@ -471,7 +520,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       Navigator.pop(context);
                       if (mounted) {
                         setState(() => isScanning = true);
-                        controller.start(); // Reprend la caméra
+                        controller.start();
                       }
                     },
                     child: Container(
@@ -601,7 +650,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       Navigator.pop(context);
                       if (mounted) {
                         setState(() => isScanning = true);
-                        controller.start(); // Reprend la caméra
+                        controller.start();
                       }
                     },
                     child: Container(
@@ -651,8 +700,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(
-                          top: 8.0, left: 16.0, right: 16.0),
+                      padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -686,8 +734,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                             ),
                             onPressed: () async {
                               await FirebaseAuth.instance.signOut();
-                              Navigator.pushReplacementNamed(
-                                  context, '/auth_choix');
+                              Navigator.pushReplacementNamed(context, '/auth_choix');
                             },
                           ),
                         ],
@@ -705,8 +752,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                       child: BackdropFilter(
                         filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                           decoration: BoxDecoration(
                             color: const Color(0xFFD9F9EF).withOpacity(0.3),
                             borderRadius: BorderRadius.circular(20),
@@ -737,8 +783,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                               height: 300,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                    color: const Color(0xFF0E6655), width: 2),
+                                border: Border.all(color: const Color(0xFF0E6655), width: 2),
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(18),
@@ -758,7 +803,6 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
                                         }
                                       },
                                     ),
-                                    // Overlay personnalisé (coins verts identiques à ton ancien design)
                                     QRScannerOverlay(
                                       borderColor: const Color(0xFF0E6655),
                                       borderRadius: 10,
@@ -801,7 +845,7 @@ class _SuperAdminScanScreenState extends State<SuperAdminScanScreen>
   }
 }
 
-// Overlay personnalisé (identique à ton ancien QrScannerOverlayShape)
+// Overlay personnalisé (identique à ton ancien design)
 class QRScannerOverlay extends StatelessWidget {
   final Color borderColor;
   final double borderRadius;
@@ -891,7 +935,6 @@ class _QRScannerOverlayPainter extends CustomPainter {
 
 class AnimatedBackground extends StatefulWidget {
   final AnimationController controller;
-
   const AnimatedBackground({required this.controller});
 
   @override
@@ -906,12 +949,9 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
   void initState() {
     super.initState();
     shapes = [
-      _buildShape(
-          100, 50, 0.5, const Color(0xFFA2D9CE).withOpacity(0.5), 0),
-      _buildShape(80, 150, 0.7, const Color(0xFFA2D9CE).withOpacity(0.4),
-          math.pi / 4),
-      _buildShape(120, 250, 0.6, const Color(0xFFA2D9CE).withOpacity(0.5),
-          math.pi / 2),
+      _buildShape(100, 50, 0.5, const Color(0xFFA2D9CE).withOpacity(0.5), 0),
+      _buildShape(80, 150, 0.7, const Color(0xFFA2D9CE).withOpacity(0.4), math.pi / 4),
+      _buildShape(120, 250, 0.6, const Color(0xFFA2D9CE).withOpacity(0.5), math.pi / 2),
     ];
   }
 
@@ -921,12 +961,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
       animation: widget.controller,
       builder: (context, child) {
         return Positioned(
-          top: top +
-              (50 * math.sin(widget.controller.value + initialAngle))
-                  .toDouble(),
-          left: 20 +
-              (50 * math.cos(widget.controller.value + initialAngle))
-                  .toDouble(),
+          top: top + (50 * math.sin(widget.controller.value + initialAngle)).toDouble(),
+          left: 20 + (50 * math.cos(widget.controller.value + initialAngle)).toDouble(),
           child: Transform.rotate(
             angle: widget.controller.value * 2 * math.pi + initialAngle,
             child: Container(

@@ -30,32 +30,81 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat();
-    _checkCameraPermission();
+    _requestCameraPermission();
   }
 
-  Future<void> _checkCameraPermission() async {
-    final status = await Permission.camera.request();
-    if (status.isGranted) {
-      setState(() {
-        cameraPermissionGranted = true;
-      });
-      print("Permission caméra accordée");
-    } else {
-      setState(() {
-        cameraPermissionGranted = false;
-      });
-      print("Permission caméra refusée");
-      _showPermissionDeniedDialog();
-    }
+  // Demande la permission dès l'ouverture de la page + popup si besoin
+Future<void> _requestCameraPermission() async {
+  // On affiche TOUJOURS le popup explicatif au démarrage de la page
+  // pour être sûr que l'utilisateur voit le message clair et appuie sur le bouton
+  if (mounted) {
+    _showCameraPermissionPopup();
+  }
+}
+
+  // Popup personnalisé pour demander la permission
+  void _showCameraPermissionPopup() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // L'utilisateur doit choisir
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white.withOpacity(0.95),
+        title: const Text(
+          "Accès à la caméra requis",
+          style: TextStyle(
+            fontFamily: 'CenturyGothic',
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0E6655),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          "Pour scanner les QR codes, cette application a besoin d'accéder à votre caméra.\n\nAppuyez sur \"Autoriser la caméra\" pour continuer.",
+          style: TextStyle(
+            fontFamily: 'CenturyGothic',
+            fontSize: 16,
+            color: Color(0xFF0E6655),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Ferme le popup
+              final status = await Permission.camera.request();
+              if (status.isGranted) {
+                setState(() {
+                  cameraPermissionGranted = true;
+                });
+              } else {
+                // Si refusé, montre le dialog classique avec ouverture paramètres
+                _showPermissionDeniedDialog();
+              }
+            },
+            child: const Text(
+              "Autoriser la caméra",
+              style: TextStyle(
+                fontFamily: 'CenturyGothic',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0E6655),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showPermissionDeniedDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Permission requise"),
+        title: const Text("Permission refusée"),
         content: const Text(
-            "L'accès à la caméra est nécessaire pour scanner les QR codes."),
+            "Vous avez refusé l'accès à la caméra. Pour scanner les QR codes, veuillez l'autoriser dans les paramètres."),
         actions: [
           TextButton(
             onPressed: () {
@@ -181,7 +230,6 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                                     }
                                                   },
                                                 ),
-                                                // Overlay personnalisé identique à ton ancien design
                                                 QRScannerOverlay(
                                                   borderColor: const Color(0xFF0E6655),
                                                   borderRadius: 8,
@@ -208,6 +256,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                                 color: Color(0xFF0E6655),
                                                 fontSize: 18,
                                               ),
+                                              textAlign: TextAlign.center,
                                             ),
                                           ),
                                         ),
@@ -245,7 +294,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
   }
 
   Future<void> _handleScannedCode(String scannedCode, BuildContext context) async {
-    await controller.stop(); // Stop la caméra
+    await controller.stop();
     try {
       final qrData = jsonDecode(scannedCode);
       print('QR Data: $qrData');
@@ -377,7 +426,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                     onTap: () {
                       Navigator.pop(context);
                       _navigateToEventSelection(userData);
-                      controller.start(); // Reprend la caméra
+                      controller.start();
                     },
                     child: Container(
                       width: double.infinity,
@@ -493,7 +542,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
-                      controller.start(); // Reprend la caméra
+                      controller.start();
                     },
                     child: Container(
                       width: double.infinity,
@@ -537,7 +586,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
   }
 }
 
-// Overlay personnalisé (identique à ton ancien QrScannerOverlayShape)
+// Overlay personnalisé
 class QRScannerOverlay extends StatelessWidget {
   final Color borderColor;
   final double borderRadius;

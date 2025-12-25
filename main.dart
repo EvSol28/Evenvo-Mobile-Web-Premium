@@ -8,6 +8,7 @@ import 'screens/super_admin_event_selection_screen.dart'; // Import manquant
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Initialisation de Firebase
+  usePathUrlStrategy(); // ← Cette ligne enlève le #
   runApp(MyApp());
 }
 
