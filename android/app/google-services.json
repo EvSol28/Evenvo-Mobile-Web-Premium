@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "669049175529",
-    "project_id": "nocevent-20791",
-    "storage_bucket": "nocevent-20791.appspot.com"
+    "project_number": "647067484176",
+    "project_id": "evenvo-ba568",
+    "storage_bucket": "evenvo-ba568.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:669049175529:android:ca65bc5f19eebf5198df78",
+        "mobilesdk_app_id": "1:647067484176:android:ANDROID_APP_ID_HERE",
         "android_client_info": {
           "package_name": "com.evenvo.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDnk5lvU3hXd_5M8d8qTyw7bNzDdD-7eN8"
+          "current_key": "AIzaSyDpLgR7glKjSIsgT66wSxMn8FhX_4hddLM"
         }
       ],
       "services": {

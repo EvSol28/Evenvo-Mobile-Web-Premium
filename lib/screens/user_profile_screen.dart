@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:Evenvo_Mobile/screens/vote_screen.dart';
+import 'package:Evenvo_Mobile/screens/dynamic_vote_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:Evenvo_Mobile/screens/authentication_screen.dart';
 import 'dart:ui' as ui;
@@ -275,16 +276,38 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     SizedBox(height: MediaQuery.of(context).size.height * 0.15),
                     // Bouton "Voter" affiché dynamiquement selon voteEnabled
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                       child: _buildGlassButton(
                         context,
-                        text: "Voter",
+                        text: "Vote Simple",
                         onPressed: voteEnabled
                             ? () {
                                 Navigator.push(
                                   context,
                                   _createModernRoute(
                                     VoteScreen(
+                                      userId: widget.userData['id'].toString(),
+                                      eventId: widget.userData['eventId'].toString(),
+                                      canVote: voteEnabled,
+                                    ),
+                                  ),
+                                );
+                              }
+                            : null,
+                      ),
+                    ),
+                    // Bouton "Formulaires de Vote" pour les formulaires dynamiques
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                      child: _buildGlassButton(
+                        context,
+                        text: "Formulaires de Vote",
+                        onPressed: voteEnabled
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  _createModernRoute(
+                                    DynamicVoteScreen(
                                       userId: widget.userData['id'].toString(),
                                       eventId: widget.userData['eventId'].toString(),
                                       canVote: voteEnabled,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // Ajout pour Firebase
+import 'package:flutter/foundation.dart';
+import 'firebase_options.dart'; // Import des options Firebase
 import 'screens/Authentification_choix_screen.dart';
 import 'screens/Authentication_screen.dart';
 import 'screens/Authentification_super_admin_screen.dart';
@@ -7,8 +9,24 @@ import 'screens/super_admin_event_selection_screen.dart'; // Import manquant
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Initialisation de Firebase
-  usePathUrlStrategy(); // ← Cette ligne enlève le #
+  
+  try {
+    // Initialisation de Firebase avec les bonnes options
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase initialisé avec succès');
+    print('Project ID: ${DefaultFirebaseOptions.currentPlatform.projectId}');
+    print('API Key: ${DefaultFirebaseOptions.currentPlatform.apiKey}');
+  } catch (e) {
+    print('Erreur initialisation Firebase: $e');
+  }
+  
+  if (kIsWeb) {
+    // Pour le web, on peut garder les # dans les URLs pour éviter les problèmes de routing
+    // usePathUrlStrategy(); // Commenté temporairement
+  }
+  
   runApp(MyApp());
 }
 

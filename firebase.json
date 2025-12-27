@@ -1,1 +1,29 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"nocevent-20791","appId":"1:669049175529:android:ca65bc5f19eebf5198df78","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"nocevent-20791","configurations":{"android":"1:669049175529:android:ca65bc5f19eebf5198df78","ios":"1:669049175529:ios:f8a86e24b195d33f98df78","macos":"1:669049175529:ios:f8a86e24b195d33f98df78","web":"1:669049175529:web:2ee6dbd0510a03bd98df78","windows":"1:669049175529:web:ff2ff3986d924ffe98df78"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "evenvo-ba568",
+          "appId": "1:647067484176:android:ANDROID_APP_ID_HERE",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "evenvo-ba568",
+          "configurations": {
+            "android": "1:647067484176:android:ANDROID_APP_ID_HERE",
+            "ios": "1:647067484176:ios:IOS_APP_ID_HERE",
+            "macos": "1:647067484176:ios:IOS_APP_ID_HERE",
+            "web": "1:647067484176:web:c9d3ec3e2d116a53528a95",
+            "windows": "1:647067484176:web:c9d3ec3e2d116a53528a95"
+          }
+        }
+      }
+    }
+  }
+}

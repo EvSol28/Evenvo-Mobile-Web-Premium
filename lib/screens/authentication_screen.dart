@@ -33,7 +33,20 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       vsync: this,
     )..repeat();
 
+    _initializeAuth();
     _initializeScanner();
+  }
+
+  void _initializeAuth() async {
+    try {
+      // S'authentifier dès le démarrage
+      if (FirebaseAuth.instance.currentUser == null) {
+        await FirebaseAuth.instance.signInAnonymously();
+        print('Authentification anonyme réussie au démarrage');
+      }
+    } catch (e) {
+      print('Erreur d\'authentification au démarrage: $e');
+    }
   }
 
   void _initializeScanner() async {
@@ -309,15 +322,41 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       final qrData = jsonDecode(scannedCode);
       print('QR Data: $qrData');
 
-      final userSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('name', isEqualTo: qrData['name'])
-          .where('surname', isEqualTo: qrData['surname'])
-          .limit(1)
-          .get();
+      // Tentative de lecture avec gestion d'erreur de permissions
+      DocumentSnapshot? userDoc;
+      QuerySnapshot? userSnapshot;
+      
+      try {
+        userSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('name', isEqualTo: qrData['name'])
+            .where('surname', isEqualTo: qrData['surname'])
+            .limit(1)
+            .get();
+      } catch (permissionError) {
+        print('Erreur de permissions Firestore: $permissionError');
+        
+        // Authentification d'abord, puis retry
+        try {
+          await FirebaseAuth.instance.signInAnonymously();
+          print('Authentification anonyme réussie, retry...');
+          
+          // Retry après authentification
+          userSnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .where('name', isEqualTo: qrData['name'])
+              .where('surname', isEqualTo: qrData['surname'])
+              .limit(1)
+              .get();
+        } catch (authError) {
+          print('Erreur d\'authentification: $authError');
+          _showErrorDialog("Erreur d'authentification: ${authError.toString()}", null);
+          return;
+        }
+      }
 
-      if (userSnapshot.docs.isNotEmpty) {
-        final userData = userSnapshot.docs.first.data();
+      if (userSnapshot != null && userSnapshot.docs.isNotEmpty) {
+        final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
         print('User Data: $userData');
 
         final roleName = qrData['role'];
@@ -326,19 +365,36 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
           return;
         }
 
-        final roleSnapshot = await FirebaseFirestore.instance
-            .collection('roles')
-            .where('name', isEqualTo: roleName)
-            .limit(1)
-            .get();
+        QuerySnapshot? roleSnapshot;
+        try {
+          roleSnapshot = await FirebaseFirestore.instance
+              .collection('roles')
+              .where('name', isEqualTo: roleName)
+              .limit(1)
+              .get();
+        } catch (roleError) {
+          print('Erreur lecture rôle: $roleError');
+          _showErrorDialog("Erreur d'accès aux rôles: ${roleError.toString()}", userData);
+          return;
+        }
 
         if (roleSnapshot.docs.isNotEmpty) {
-          final roleData = roleSnapshot.docs.first.data();
+          final roleData = roleSnapshot.docs.first.data() as Map<String, dynamic>;
           print('Role Data: $roleData');
 
           if (roleData['MobileAccessGlobal'] == true) {
-            await FirebaseAuth.instance.signInAnonymously();
-            _showSuccessDialog(userData, roleName);
+            // Authentification avec un token personnalisé basé sur l'utilisateur
+            try {
+              if (FirebaseAuth.instance.currentUser == null) {
+                await FirebaseAuth.instance.signInAnonymously();
+              }
+              // Stocker les données utilisateur localement pour les permissions
+              _showSuccessDialog(userData, roleName);
+            } catch (authError) {
+              print('Erreur d\'authentification: $authError');
+              _showErrorDialog("Erreur d'authentification: $authError", userData);
+              return;
+            }
           } else {
             _showErrorDialog(
                 "Votre rôle n'est pas autorisé à accéder à l'application", userData);

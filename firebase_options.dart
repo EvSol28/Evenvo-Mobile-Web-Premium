@@ -41,48 +41,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAPeamAYQmWeeOf8AX_J2rcQRRyKS22gr8',
-    appId: '1:669049175529:web:2ee6dbd0510a03bd98df78',
-    messagingSenderId: '669049175529',
-    projectId: 'nocevent-20791',
-    authDomain: 'nocevent-20791.firebaseapp.com',
-    storageBucket: 'nocevent-20791.firebasestorage.app',
-    measurementId: 'G-5M1BQ693B9',
+    apiKey: 'AIzaSyDpLgR7glKjSIsgT66wSxMn8FhX_4hddLM',
+    appId: '1:647067484176:web:c9d3ec3e2d116a53528a95',
+    messagingSenderId: '647067484176',
+    projectId: 'evenvo-ba568',
+    authDomain: 'evenvo-ba568.firebaseapp.com',
+    storageBucket: 'evenvo-ba568.firebasestorage.app',
+    measurementId: 'G-429KZ0X69X',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDnk5lvU3hXd_5M8d8qTyw7bNzDdD-7eN8',
-    appId: '1:669049175529:android:ca65bc5f19eebf5198df78',
-    messagingSenderId: '669049175529',
-    projectId: 'nocevent-20791',
-    storageBucket: 'nocevent-20791.firebasestorage.app',
+    apiKey: 'AIzaSyDpLgR7glKjSIsgT66wSxMn8FhX_4hddLM',
+    appId: '1:647067484176:android:ANDROID_APP_ID_HERE',
+    messagingSenderId: '647067484176',
+    projectId: 'evenvo-ba568',
+    storageBucket: 'evenvo-ba568.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBMvqsU-zA_fycER7-pgM2kcP2fai4_vsM',
-    appId: '1:669049175529:ios:f8a86e24b195d33f98df78',
-    messagingSenderId: '669049175529',
-    projectId: 'nocevent-20791',
-    storageBucket: 'nocevent-20791.firebasestorage.app',
-    iosBundleId: 'com.example.nocEvent',
+    apiKey: 'AIzaSyDpLgR7glKjSIsgT66wSxMn8FhX_4hddLM',
+    appId: '1:647067484176:ios:IOS_APP_ID_HERE',
+    messagingSenderId: '647067484176',
+    projectId: 'evenvo-ba568',
+    storageBucket: 'evenvo-ba568.firebasestorage.app',
+    iosBundleId: 'com.example.evenvoMobile',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBMvqsU-zA_fycER7-pgM2kcP2fai4_vsM',
-    appId: '1:669049175529:ios:f8a86e24b195d33f98df78',
-    messagingSenderId: '669049175529',
-    projectId: 'nocevent-20791',
-    storageBucket: 'nocevent-20791.firebasestorage.app',
-    iosBundleId: 'com.example.nocEvent',
+    apiKey: 'AIzaSyDpLgR7glKjSIsgT66wSxMn8FhX_4hddLM',
+    appId: '1:647067484176:ios:IOS_APP_ID_HERE',
+    messagingSenderId: '647067484176',
+    projectId: 'evenvo-ba568',
+    storageBucket: 'evenvo-ba568.firebasestorage.app',
+    iosBundleId: 'com.example.evenvoMobile',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAPeamAYQmWeeOf8AX_J2rcQRRyKS22gr8',
-    appId: '1:669049175529:web:ff2ff3986d924ffe98df78',
-    messagingSenderId: '669049175529',
-    projectId: 'nocevent-20791',
-    authDomain: 'nocevent-20791.firebaseapp.com',
-    storageBucket: 'nocevent-20791.firebasestorage.app',
-    measurementId: 'G-TPXMKJMXG2',
+    apiKey: 'AIzaSyDpLgR7glKjSIsgT66wSxMn8FhX_4hddLM',
+    appId: '1:647067484176:web:c9d3ec3e2d116a53528a95',
+    messagingSenderId: '647067484176',
+    projectId: 'evenvo-ba568',
+    authDomain: 'evenvo-ba568.firebaseapp.com',
+    storageBucket: 'evenvo-ba568.firebasestorage.app',
+    measurementId: 'G-429KZ0X69X',
   );
 }

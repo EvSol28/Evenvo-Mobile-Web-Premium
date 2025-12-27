@@ -6,12 +6,12 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: "AIzaSyAPeamAYQmWeeOf8AX_J2rcQRRyKS22gr8",
-    authDomain: "nocevent-20791.firebaseapp.com",
-    projectId: "nocevent-20791",
-    storageBucket: "nocevent-20791.firebasestorage.app",
-    messagingSenderId: "669049175529",
-    appId: "1:669049175529:web:2ee6dbd0510a03bd98df78",
-    measurementId: "G-5M1BQ693B9",
+    apiKey: "AIzaSyDpLgR7glKjSIsgT66wSxMn8FhX_4hddLM",
+    authDomain: "evenvo-ba568.firebaseapp.com",
+    projectId: "evenvo-ba568",
+    storageBucket: "evenvo-ba568.firebasestorage.app",
+    messagingSenderId: "647067484176",
+    appId: "1:647067484176:web:c9d3ec3e2d116a53528a95",
+    measurementId: "G-429KZ0X69X",
   );
 }
