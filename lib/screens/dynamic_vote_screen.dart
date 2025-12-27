@@ -47,11 +47,32 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
 
   Future<void> _loadVoteForms() async {
     try {
-      // Remplacez par votre URL de serveur
-      final response = await http.get(
+      print('🔍 Chargement des formulaires pour eventId: ${widget.eventId}');
+      
+      // Essayer d'abord avec l'ID tel quel
+      var response = await http.get(
         Uri.parse('http://localhost:4001/api/event/${widget.eventId}/active_vote_forms'),
         headers: {'Content-Type': 'application/json'},
       );
+
+      print('📡 Réponse serveur (${widget.eventId}): ${response.statusCode}');
+      
+      // Si pas de résultats, essayer avec la première lettre en majuscule
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] && data['voteForms'].isEmpty) {
+          final capitalizedEventId = widget.eventId.replaceFirst(widget.eventId[0], widget.eventId[0].toUpperCase());
+          print('🔄 Tentative avec ID capitalisé: $capitalizedEventId');
+          
+          response = await http.get(
+            Uri.parse('http://localhost:4001/api/event/$capitalizedEventId/active_vote_forms'),
+            headers: {'Content-Type': 'application/json'},
+          );
+          print('📡 Réponse serveur ($capitalizedEventId): ${response.statusCode}');
+        }
+      }
+
+      print('📄 Corps de la réponse: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
