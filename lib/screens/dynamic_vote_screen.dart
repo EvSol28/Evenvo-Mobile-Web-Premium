@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
+import '../config/api_config.dart';
 
 class DynamicVoteScreen extends StatefulWidget {
   final String userId;
@@ -48,10 +50,12 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   Future<void> _loadVoteForms() async {
     try {
       print('🔍 Chargement des formulaires pour eventId: ${widget.eventId}');
+      print('🌐 Environnement: ${ApiConfig.environment}');
+      print('🌐 URL du serveur: ${ApiConfig.baseUrl}');
       
       // Essayer d'abord avec l'ID tel quel
       var response = await http.get(
-        Uri.parse('http://localhost:4001/api/event/${widget.eventId}/active_vote_forms'),
+        Uri.parse(ApiConfig.activeVoteForms(widget.eventId)),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -65,7 +69,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
           print('🔄 Tentative avec ID capitalisé: $capitalizedEventId');
           
           response = await http.get(
-            Uri.parse('http://localhost:4001/api/event/$capitalizedEventId/active_vote_forms'),
+            Uri.parse(ApiConfig.activeVoteForms(capitalizedEventId)),
             headers: {'Content-Type': 'application/json'},
           );
           print('📡 Réponse serveur ($capitalizedEventId): ${response.statusCode}');
@@ -120,7 +124,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:4001/api/event/${widget.eventId}/submit_vote'),
+        Uri.parse(ApiConfig.submitVote(widget.eventId)),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'formId': formId,
