@@ -3,13 +3,8 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   static String get baseUrl {
     if (kIsWeb && !Uri.base.host.contains('localhost')) {
-      // IMPORTANT: REMPLACEZ cette URL par celle de votre backend déployé !
-      // Exemples possibles :
-      // return 'https://evenvo-demo.onrender.com';
-      // return 'https://your-backend-name.onrender.com';
-      
-      // URL temporaire - DOIT ÊTRE CHANGÉE !
-      return 'https://CHANGEZ-MOI-URL-BACKEND.onrender.com';
+      // URL du backend déployé sur Render
+      return 'https://evenvo-demo-premium.onrender.com';
     } else {
       // En développement local
       return 'http://localhost:4001';
