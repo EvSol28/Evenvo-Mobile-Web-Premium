@@ -172,7 +172,8 @@ Ce système permet de créer des formulaires de vote personnalisés via le dashb
 
 1. **"Erreur de connexion au serveur"**
    - Vérifier que le serveur Node.js est démarré
-   - Vérifier l'URL dans `dynamic_vote_screen.dart` (localhost:4000)
+   - Vérifier l'URL dans `dynamic_vote_screen.dart` (localhost:4001)
+   - Recompiler l'app Flutter si nécessaire : `flutter clean && flutter build web`
 
 2. **"Aucun formulaire disponible"**
    - Vérifier que des formulaires sont créés et activés dans le dashboard
@@ -181,6 +182,16 @@ Ce système permet de créer des formulaires de vote personnalisés via le dashb
 3. **"Vous avez déjà voté"**
    - Normal, un utilisateur ne peut voter qu'une fois par formulaire
    - Pour tester, supprimer les entrées dans `vote_responses`
+
+4. **"failed to fetch" après modifications**
+   - Toujours recompiler après changement d'URL : `flutter clean && flutter build web`
+   - Vérifier que le serveur backend tourne sur le bon port
+
+### Scripts de test
+
+- `test_full_system.js` : Test complet backend + frontend
+- `Evenvo-Demo/test_api.js` : Test des APIs backend uniquement
+- `Evenvo-Demo/test_routes.js` : Test des routes serveur
 
 ### Logs utiles
 - Console du navigateur (dashboard)
