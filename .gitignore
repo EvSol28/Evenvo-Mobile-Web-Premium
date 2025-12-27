@@ -41,5 +41,24 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-"service-account.json" 
-service-account.json 
+
+# Firebase sensitive files
+service-account.json
+**/evenvo-ba568-firebase-adminsdk-*.json
+GoogleService-Info.plist
+google-services.json
+
+# Node.js (for Evenvo-Demo)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Logs
+logs.txt
+firebase-debug.log 

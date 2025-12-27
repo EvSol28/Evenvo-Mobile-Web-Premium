@@ -49,7 +49,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
     try {
       // Remplacez par votre URL de serveur
       final response = await http.get(
-        Uri.parse('http://localhost:4000/api/event/${widget.eventId}/active_vote_forms'),
+        Uri.parse('http://localhost:4001/api/event/${widget.eventId}/active_vote_forms'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -99,7 +99,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:4000/api/event/${widget.eventId}/submit_vote'),
+        Uri.parse('http://localhost:4001/api/event/${widget.eventId}/submit_vote'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'formId': formId,
