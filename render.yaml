@@ -1,0 +1,10 @@
+services:
+  - type: static_site
+    name: evenvo-mobile-web-premium
+    repo: https://github.com/EvSol28/Evenvo-Mobile-Web-Premium
+    branch: main
+    buildCommand: flutter build web --release
+    publishDir: build/web
+    envVars:
+      - key: FLUTTER_WEB
+        value: true
