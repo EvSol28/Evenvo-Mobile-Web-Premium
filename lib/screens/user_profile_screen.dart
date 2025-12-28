@@ -274,34 +274,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       ),
                     ),
                     SizedBox(height: MediaQuery.of(context).size.height * 0.15),
-                    // Bouton "Voter" affiché dynamiquement selon voteEnabled
+                    // Bouton "Voter" pour les formulaires dynamiques (ancien "Formulaires de Vote")
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                       child: _buildGlassButton(
                         context,
-                        text: "Vote Simple",
-                        onPressed: voteEnabled
-                            ? () {
-                                Navigator.push(
-                                  context,
-                                  _createModernRoute(
-                                    VoteScreen(
-                                      userId: widget.userData['id'].toString(),
-                                      eventId: widget.userData['eventId'].toString(),
-                                      canVote: voteEnabled,
-                                    ),
-                                  ),
-                                );
-                              }
-                            : null,
-                      ),
-                    ),
-                    // Bouton "Formulaires de Vote" pour les formulaires dynamiques
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                      child: _buildGlassButton(
-                        context,
-                        text: "Formulaires de Vote",
+                        text: "Voter",
                         onPressed: voteEnabled
                             ? () {
                                 Navigator.push(
