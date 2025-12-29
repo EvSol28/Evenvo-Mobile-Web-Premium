@@ -2,24 +2,17 @@ import 'package:flutter/foundation.dart';
 
 class ApiConfig {
   static String get baseUrl {
-    if (kIsWeb && !Uri.base.host.contains('localhost')) {
-      // URL du backend déployé sur Render
-      return 'https://evenvo-demo-premium.onrender.com';
-    } else {
-      // En développement local
-      return 'http://localhost:4001';
-    }
+    // Toujours utiliser l'URL de production pour éviter les problèmes de connexion
+    return 'https://evenvo-demo-premium.onrender.com';
   }
   
   static String get environment {
-    if (kIsWeb && !Uri.base.host.contains('localhost')) {
-      return 'production';
-    } else {
-      return 'development';
-    }
+    return 'production';
   }
   
   // URLs des endpoints
   static String activeVoteForms(String eventId) => '$baseUrl/api/event/$eventId/active_vote_forms';
   static String submitVote(String eventId) => '$baseUrl/api/event/$eventId/submit_vote';
+  static String voteStatus(String eventId, String userId, String formId) => '$baseUrl/api/event/$eventId/vote_status/$userId/$formId';
+  static String userResponses(String eventId, String userId, String formId) => '$baseUrl/api/event/$eventId/user_responses/$userId/$formId';
 }

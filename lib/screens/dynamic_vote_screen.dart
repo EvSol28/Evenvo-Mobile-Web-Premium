@@ -31,6 +31,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   late AnimationController _backgroundController;
   Map<String, bool> _voteStatus = {}; // Track which forms have been voted on
   String? _selectedFormId; // Track which form is currently being voted on
+  Map<String, Map<String, dynamic>> _formResponses = {}; // Store form responses
 
   @override
   void initState() {
@@ -117,7 +118,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         
         // Call backend to check if user has voted on this form
         final response = await http.get(
-          Uri.parse('${ApiConfig.baseUrl}/api/event/${widget.eventId}/vote_status/${widget.userId}/$formId'),
+          Uri.parse(ApiConfig.voteStatus(widget.eventId, widget.userId, formId)),
           headers: {'Content-Type': 'application/json'},
         );
 
@@ -142,6 +143,10 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   void _selectForm(String formId) {
     setState(() {
       _selectedFormId = formId;
+      // Initialize form responses for this form if not already done
+      if (!_formResponses.containsKey(formId)) {
+        _formResponses[formId] = {};
+      }
     });
   }
 
@@ -149,17 +154,6 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
     setState(() {
       _selectedFormId = null;
     });
-  }
-          _error = 'Erreur de connexion au serveur';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Erreur: $e';
-        _isLoading = false;
-      });
-    }
   }
 
   Future<void> _submitVote(String formId, Map<String, dynamic> formResponses) async {
@@ -240,13 +234,13 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             ),
           ),
           SizedBox(height: 8),
-          _buildFieldInput(fieldType, fieldId, formId, options),
+          _buildFieldInput(fieldType, fieldId, formId, options, field),
         ],
       ),
     );
   }
 
-  Widget _buildFieldInput(String type, String fieldId, String formId, List<dynamic>? options) {
+  Widget _buildFieldInput(String type, String fieldId, String formId, List<dynamic>? options, Map<String, dynamic>? field) {
     switch (type) {
       case 'text':
         return TextFormField(
@@ -262,6 +256,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             ),
           ),
           onChanged: (value) {
+            if (!_formResponses.containsKey(formId)) {
+              _formResponses[formId] = {};
+            }
             _formResponses[formId]![fieldId] = value;
           },
         );
@@ -281,6 +278,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             ),
           ),
           onChanged: (value) {
+            if (!_formResponses.containsKey(formId)) {
+              _formResponses[formId] = {};
+            }
             _formResponses[formId]![fieldId] = value;
           },
         );
@@ -297,6 +297,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
               groupValue: _formResponses[formId]?[fieldId],
               onChanged: (value) {
                 setState(() {
+                  if (!_formResponses.containsKey(formId)) {
+                    _formResponses[formId] = {};
+                  }
                   _formResponses[formId]![fieldId] = value;
                 });
               },
@@ -317,6 +320,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
               value: currentValues.contains(option.toString()),
               onChanged: (bool? value) {
                 setState(() {
+                  if (!_formResponses.containsKey(formId)) {
+                    _formResponses[formId] = {};
+                  }
                   if (_formResponses[formId]![fieldId] == null) {
                     _formResponses[formId]![fieldId] = <String>[];
                   }
@@ -355,6 +361,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
           }).toList(),
           onChanged: (value) {
             setState(() {
+              if (!_formResponses.containsKey(formId)) {
+                _formResponses[formId] = {};
+              }
               _formResponses[formId]![fieldId] = value;
             });
           },
@@ -375,6 +384,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             ),
           ),
           onChanged: (value) {
+            if (!_formResponses.containsKey(formId)) {
+              _formResponses[formId] = {};
+            }
             _formResponses[formId]![fieldId] = int.tryParse(value) ?? value;
           },
         );
@@ -403,6 +415,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             );
             if (date != null) {
               setState(() {
+                if (!_formResponses.containsKey(formId)) {
+                  _formResponses[formId] = {};
+                }
                 _formResponses[formId]![fieldId] = date.toIso8601String().split('T')[0];
               });
             }
@@ -416,11 +431,14 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         return Row(
           children: List.generate(5, (index) {
             final rating = index + 1;
-            final currentRating = formResponses[fieldId] as int? ?? 0;
+            final currentRating = _formResponses[formId]?[fieldId] as int? ?? 0;
             return GestureDetector(
               onTap: () {
                 setState(() {
-                  formResponses[fieldId] = rating;
+                  if (!_formResponses.containsKey(formId)) {
+                    _formResponses[formId] = {};
+                  }
+                  _formResponses[formId]![fieldId] = rating;
                 });
               },
               child: Icon(
@@ -437,7 +455,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Description field
-            if (field['description'] != null && field['description'].isNotEmpty) ...[
+            if (field != null && field['description'] != null && field['description'].isNotEmpty) ...[
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(12),
@@ -458,29 +476,47 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                 ),
               ),
             ],
-            // Vote options
+            // Vote options as buttons
             Column(
               children: ['Oui', 'Non', 'S\'abstenir'].map<Widget>((option) {
+                final isSelected = _formResponses[formId]?[fieldId] == option;
                 return Container(
-                  margin: EdgeInsets.only(bottom: 8),
-                  child: RadioListTile<String>(
-                    title: Text(
+                  width: double.infinity,
+                  margin: EdgeInsets.only(bottom: 12),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        if (!_formResponses.containsKey(formId)) {
+                          _formResponses[formId] = {};
+                        }
+                        _formResponses[formId]![fieldId] = option;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isSelected 
+                          ? Color(0xFF0E6655) 
+                          : Colors.white,
+                      foregroundColor: isSelected 
+                          ? Colors.white 
+                          : Color(0xFF0E6655),
+                      side: BorderSide(
+                        color: Color(0xFF0E6655),
+                        width: 2,
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: isSelected ? 4 : 1,
+                    ),
+                    child: Text(
                       option,
                       style: TextStyle(
                         fontFamily: 'CenturyGothic',
                         fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    value: option,
-                    groupValue: formResponses[fieldId],
-                    onChanged: (value) {
-                      setState(() {
-                        formResponses[fieldId] = value;
-                      });
-                    },
-                    activeColor: Color(0xFF0E6655),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8),
                   ),
                 );
               }).toList(),
@@ -661,7 +697,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         return Container(
           margin: EdgeInsets.only(bottom: 16),
           child: GestureDetector(
-            onTap: widget.canVote && !hasVoted ? () => _selectForm(formId) : null,
+            onTap: widget.canVote ? () => _selectForm(formId) : null,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: BackdropFilter(
@@ -671,7 +707,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                   decoration: BoxDecoration(
                     color: hasVoted 
                         ? Colors.grey.withOpacity(0.3) // Gray glass effect for voted forms
-                        : Color(0xFFd9f9ef).withOpacity(0.3),
+                        : Color(0xFFd9f9ef).withOpacity(0.3), // Green glass effect for unvoted forms
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: hasVoted 
@@ -689,14 +725,13 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
                               form['name'] ?? 'Formulaire de vote',
                               style: TextStyle(
                                 fontFamily: 'CenturyGothic',
@@ -705,48 +740,46 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                                 color: hasVoted ? Colors.grey[600] : Color(0xFF0E6655),
                               ),
                             ),
-                          ),
-                          if (hasVoted)
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[400],
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: Text(
-                                'Voté déjà',
+                            if (form['description'] != null && form['description'].isNotEmpty) ...[
+                              SizedBox(height: 8),
+                              Text(
+                                form['description'],
                                 style: TextStyle(
                                   fontFamily: 'CenturyGothic',
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: hasVoted ? Colors.grey[500] : Color(0xFF6F6F6F),
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                        ],
+                            ],
+                          ],
+                        ),
                       ),
-                      if (form['description'] != null && form['description'].isNotEmpty) ...[
-                        SizedBox(height: 8),
-                        Text(
-                          form['description'],
+                      SizedBox(width: 12),
+                      // Status indicator - like in the suivi_vote table
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: hasVoted ? Color(0xFF0E6655) : Colors.grey[400],
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Text(
+                          hasVoted ? 'Voté' : 'Non voté',
                           style: TextStyle(
                             fontFamily: 'CenturyGothic',
-                            fontSize: 14,
-                            color: hasVoted ? Colors.grey[500] : Color(0xFF6F6F6F),
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
+                      ),
                       if (!hasVoted && widget.canVote) ...[
-                        SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              color: Color(0xFF0E6655),
-                              size: 16,
-                            ),
-                          ],
+                        SizedBox(width: 8),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          color: Color(0xFF0E6655),
+                          size: 16,
                         ),
                       ],
                     ],
@@ -762,8 +795,12 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
 
   Widget _buildFormVotingInterface() {
     final form = _voteForms.firstWhere((f) => f['id'] == _selectedFormId);
-    final Map<String, dynamic> formResponses = {};
     final bool hasVoted = _voteStatus[_selectedFormId] ?? false;
+    
+    // Initialize form responses for this form if not already done
+    if (!_formResponses.containsKey(_selectedFormId!)) {
+      _formResponses[_selectedFormId!] = {};
+    }
     
     return FutureBuilder<Map<String, dynamic>>(
       future: hasVoted ? _loadExistingResponses(_selectedFormId!) : Future.value({}),
@@ -774,7 +811,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         
         // Initialize form responses with existing data if available
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-          formResponses.addAll(snapshot.data!);
+          _formResponses[_selectedFormId!]!.addAll(snapshot.data!);
         }
         
         return SingleChildScrollView(
@@ -857,7 +894,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                     
                     // Form fields
                     ...((form['fields'] as List<dynamic>?) ?? []).map<Widget>((field) {
-                      return _buildFormField(field as Map<String, dynamic>, form['id'], formResponses);
+                      return _buildFormField(field as Map<String, dynamic>, form['id']);
                     }).toList(),
                     
                     SizedBox(height: 20),
@@ -867,7 +904,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: widget.canVote 
-                            ? () => _submitVote(form['id'], formResponses)
+                            ? () => _submitVote(form['id'], _formResponses[form['id']] ?? {})
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: hasVoted ? Colors.orange : Color(0xFF0E6655),
@@ -902,7 +939,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   Future<Map<String, dynamic>> _loadExistingResponses(String formId) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/api/event/${widget.eventId}/user_responses/${widget.userId}/$formId'),
+        Uri.parse(ApiConfig.userResponses(widget.eventId, widget.userId, formId)),
         headers: {'Content-Type': 'application/json'},
       );
 
