@@ -110,11 +110,32 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   }
 
   Future<void> _checkVoteStatus() async {
-    // Check if user has already voted on each form
-    // This would typically involve checking the backend for existing votes
-    // For now, we'll initialize all as not voted
-    for (var form in _voteForms) {
-      _voteStatus[form['id']] = false;
+    try {
+      // Check if user has already voted on each form by calling the backend
+      for (var form in _voteForms) {
+        final formId = form['id'];
+        
+        // Call backend to check if user has voted on this form
+        final response = await http.get(
+          Uri.parse('${ApiConfig.baseUrl}/api/event/${widget.eventId}/vote_status/${widget.userId}/$formId'),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          _voteStatus[formId] = data['hasVoted'] ?? false;
+        } else {
+          // If endpoint doesn't exist yet, default to false
+          _voteStatus[formId] = false;
+        }
+      }
+      setState(() {});
+    } catch (e) {
+      print('Error checking vote status: $e');
+      // Default all to false if there's an error
+      for (var form in _voteForms) {
+        _voteStatus[form['id']] = false;
+      }
     }
   }
 
@@ -141,14 +162,13 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
     }
   }
 
-  Future<void> _submitVote(String formId) async {
+  Future<void> _submitVote(String formId, Map<String, dynamic> formResponses) async {
     if (!widget.canVote) {
       _showMessage("Vous n'avez pas le droit de voter pour cet événement.", Colors.red);
       return;
     }
 
-    final responses = _formResponses[formId];
-    if (responses == null || responses.isEmpty) {
+    if (formResponses.isEmpty) {
       _showMessage("Veuillez répondre à au moins une question.", Colors.orange);
       return;
     }
@@ -160,16 +180,24 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         body: json.encode({
           'formId': formId,
           'userId': widget.userId,
-          'responses': responses,
+          'responses': formResponses,
         }),
       );
 
       final data = json.decode(response.body);
       
       if (response.statusCode == 200 && data['success']) {
-        _showMessage(data['message'] ?? 'Vote enregistré avec succès', Colors.green);
-        // Optionnel: recharger les formulaires ou marquer comme voté
-        _loadVoteForms();
+        final isUpdate = data['isUpdate'] ?? false;
+        _showMessage(
+          data['message'] ?? (isUpdate ? 'Vote mis à jour avec succès' : 'Vote enregistré avec succès'), 
+          Colors.green
+        );
+        
+        // Mark form as voted and go back to form list
+        setState(() {
+          _voteStatus[formId] = true;
+          _selectedFormId = null;
+        });
       } else {
         _showMessage(data['message'] ?? 'Erreur lors du vote', Colors.red);
       }
@@ -388,11 +416,11 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         return Row(
           children: List.generate(5, (index) {
             final rating = index + 1;
-            final currentRating = _formResponses[formId]?[fieldId] as int? ?? 0;
+            final currentRating = formResponses[fieldId] as int? ?? 0;
             return GestureDetector(
               onTap: () {
                 setState(() {
-                  _formResponses[formId]![fieldId] = rating;
+                  formResponses[fieldId] = rating;
                 });
               },
               child: Icon(
@@ -402,6 +430,62 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
               ),
             );
           }),
+        );
+
+      case 'syndical':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Description field
+            if (field['description'] != null && field['description'].isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12),
+                margin: EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Color(0xFFF0F9FF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Color(0xFF0E6655).withOpacity(0.2)),
+                ),
+                child: Text(
+                  field['description'],
+                  style: TextStyle(
+                    fontFamily: 'CenturyGothic',
+                    fontSize: 14,
+                    color: Color(0xFF0E6655),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+            // Vote options
+            Column(
+              children: ['Oui', 'Non', 'S\'abstenir'].map<Widget>((option) {
+                return Container(
+                  margin: EdgeInsets.only(bottom: 8),
+                  child: RadioListTile<String>(
+                    title: Text(
+                      option,
+                      style: TextStyle(
+                        fontFamily: 'CenturyGothic',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    value: option,
+                    groupValue: formResponses[fieldId],
+                    onChanged: (value) {
+                      setState(() {
+                        formResponses[fieldId] = value;
+                      });
+                    },
+                    activeColor: Color(0xFF0E6655),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         );
 
       default:
@@ -679,94 +763,159 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   Widget _buildFormVotingInterface() {
     final form = _voteForms.firstWhere((f) => f['id'] == _selectedFormId);
     final Map<String, dynamic> formResponses = {};
+    final bool hasVoted = _voteStatus[_selectedFormId] ?? false;
     
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Color(0xFFd9f9ef).withOpacity(0.3),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Color(0xFFd9f9ef).withOpacity(0.5),
-                width: 1,
+    return FutureBuilder<Map<String, dynamic>>(
+      future: hasVoted ? _loadExistingResponses(_selectedFormId!) : Future.value({}),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: Color(0xFF0E6655)));
+        }
+        
+        // Initialize form responses with existing data if available
+        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+          formResponses.addAll(snapshot.data!);
+        }
+        
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: hasVoted 
+                      ? Colors.grey.withOpacity(0.2) 
+                      : Color(0xFFd9f9ef).withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: hasVoted 
+                        ? Colors.grey.withOpacity(0.5)
+                        : Color(0xFFd9f9ef).withOpacity(0.5),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: hasVoted 
+                          ? Colors.grey.withOpacity(0.1)
+                          : Color(0xFFd9f9ef).withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Form title and description
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            form['name'] ?? 'Formulaire de vote',
+                            style: TextStyle(
+                              fontFamily: 'CenturyGothic',
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: hasVoted ? Colors.grey[600] : Color(0xFF0E6655),
+                            ),
+                          ),
+                        ),
+                        if (hasVoted)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Color(0xFF0E6655),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Voté',
+                              style: TextStyle(
+                                fontFamily: 'CenturyGothic',
+                                fontSize: 12,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (form['description'] != null && form['description'].isNotEmpty) ...[
+                      SizedBox(height: 8),
+                      Text(
+                        form['description'],
+                        style: TextStyle(
+                          fontFamily: 'CenturyGothic',
+                          fontSize: 14,
+                          color: hasVoted ? Colors.grey[500] : Color(0xFF6F6F6F),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: 20),
+                    
+                    // Form fields
+                    ...((form['fields'] as List<dynamic>?) ?? []).map<Widget>((field) {
+                      return _buildFormField(field as Map<String, dynamic>, form['id'], formResponses);
+                    }).toList(),
+                    
+                    SizedBox(height: 20),
+                    
+                    // Submit button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: widget.canVote 
+                            ? () => _submitVote(form['id'], formResponses)
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: hasVoted ? Colors.orange : Color(0xFF0E6655),
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: Text(
+                          widget.canVote 
+                              ? (hasVoted ? 'Modifier le vote' : 'Soumettre le vote')
+                              : 'Vote non autorisé',
+                          style: TextStyle(
+                            fontFamily: 'CenturyGothic',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0xFFd9f9ef).withOpacity(0.1),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Form title and description
-                Text(
-                  form['name'] ?? 'Formulaire de vote',
-                  style: TextStyle(
-                    fontFamily: 'CenturyGothic',
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0E6655),
-                  ),
-                ),
-                if (form['description'] != null && form['description'].isNotEmpty) ...[
-                  SizedBox(height: 8),
-                  Text(
-                    form['description'],
-                    style: TextStyle(
-                      fontFamily: 'CenturyGothic',
-                      fontSize: 14,
-                      color: Color(0xFF6F6F6F),
-                    ),
-                  ),
-                ],
-                SizedBox(height: 20),
-                
-                // Form fields
-                ...((form['fields'] as List<dynamic>?) ?? []).map<Widget>((field) {
-                  return _buildFormField(field as Map<String, dynamic>, form['id'], formResponses);
-                }).toList(),
-                
-                SizedBox(height: 20),
-                
-                // Submit button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: widget.canVote 
-                        ? () => _submitVote(form['id'], formResponses)
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF0E6655),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: Text(
-                      widget.canVote ? 'Soumettre le vote' : 'Vote non autorisé',
-                      style: TextStyle(
-                        fontFamily: 'CenturyGothic',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
+  }
+
+  Future<Map<String, dynamic>> _loadExistingResponses(String formId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/api/event/${widget.eventId}/user_responses/${widget.userId}/$formId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] && data['hasVoted']) {
+          return Map<String, dynamic>.from(data['responses']);
+        }
+      }
+    } catch (e) {
+      print('Error loading existing responses: $e');
+    }
+    return {};
   }
 }
 
