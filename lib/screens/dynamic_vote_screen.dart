@@ -241,6 +241,11 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   }
 
   Widget _buildFieldInput(String type, String fieldId, String formId, List<dynamic>? options, Map<String, dynamic>? field) {
+    // Debug log pour voir le type de champ reçu
+    print('🔍 Type de champ reçu: $type');
+    print('🔍 Options: $options');
+    print('🔍 Field data: $field');
+    
     switch (type) {
       case 'text':
         return TextFormField(
