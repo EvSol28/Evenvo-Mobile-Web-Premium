@@ -24,6 +24,7 @@ class DynamicVoteScreen extends StatefulWidget {
   _DynamicVoteScreenState createState() => _DynamicVoteScreenState();
 }
 
+// FORCE REBUILD - Version 2025-12-30-15:47
 class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _voteForms = [];
   bool _isLoading = true;
@@ -241,7 +242,8 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   }
 
   Widget _buildFieldInput(String type, String fieldId, String formId, List<dynamic>? options, Map<String, dynamic>? field) {
-    // Debug log pour voir le type de champ reçu
+    // VERSION 2025-12-30-15:47 - NOUVELLE VERSION CHARGÉE
+    print('🚀 NOUVELLE VERSION CHARGÉE - 2025-12-30-15:47');
     print('🔍 Type de champ reçu: $type');
     print('🔍 Options: $options');
     print('🔍 Field data: $field');
@@ -262,6 +264,25 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Message de confirmation que le ranking fonctionne
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(12),
+            margin: EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Color(0xFF4CAF50),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '✅ Ranking activé ! Version 2025-12-30-15:47',
+              style: TextStyle(
+                fontFamily: 'CenturyGothic',
+                fontSize: 12,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
           // Description du champ si disponible
           if (field != null && field['description'] != null && field['description'].isNotEmpty) ...[
             Container(
