@@ -369,26 +369,170 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
           },
         );
 
-      case 'number':
-        return TextFormField(
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            hintText: 'Entrez un nombre',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Color(0xFF0E6655)),
+      case 'ranking':
+        // Créer une liste ordonnée des options pour le classement
+        final List<String> rankingOptions = List<String>.from(options ?? []);
+        final Map<String, int> currentRanking = Map<String, int>.from(
+          _formResponses[formId]?[fieldId] as Map<String, dynamic>? ?? {}
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Description du champ si disponible
+            if (field != null && field['description'] != null && field['description'].isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12),
+                margin: EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Color(0xFFF0F9FF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Color(0xFF0E6655).withOpacity(0.2)),
+                ),
+                child: Text(
+                  field['description'],
+                  style: TextStyle(
+                    fontFamily: 'CenturyGothic',
+                    fontSize: 14,
+                    color: Color(0xFF0E6655),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+            // Instructions
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12),
+              margin: EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Color(0xFFE0F2F1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Color(0xFF0E6655).withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Color(0xFF0E6655), size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Classez les options par ordre de préférence (1 = préféré, ${rankingOptions.length} = moins préféré)',
+                      style: TextStyle(
+                        fontFamily: 'CenturyGothic',
+                        fontSize: 12,
+                        color: Color(0xFF0E6655),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Color(0xFF0E6655), width: 2),
-            ),
-          ),
-          onChanged: (value) {
-            if (!_formResponses.containsKey(formId)) {
-              _formResponses[formId] = {};
-            }
-            _formResponses[formId]![fieldId] = int.tryParse(value) ?? value;
-          },
+            // Options de classement
+            ...rankingOptions.map<Widget>((option) {
+              final currentRank = currentRanking[option];
+              return Container(
+                margin: EdgeInsets.only(bottom: 12),
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: currentRank != null ? Color(0xFF0E6655).withOpacity(0.1) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: currentRank != null ? Color(0xFF0E6655) : Colors.grey[300]!,
+                    width: currentRank != null ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        option,
+                        style: TextStyle(
+                          fontFamily: 'CenturyGothic',
+                          fontSize: 16,
+                          fontWeight: currentRank != null ? FontWeight.w600 : FontWeight.normal,
+                          color: currentRank != null ? Color(0xFF0E6655) : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    // Dropdown pour sélectionner le rang
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: currentRank != null ? Color(0xFF0E6655) : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: DropdownButton<int>(
+                        value: currentRank,
+                        hint: Text(
+                          'Rang',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            fontFamily: 'CenturyGothic',
+                          ),
+                        ),
+                        underline: SizedBox(),
+                        dropdownColor: Colors.white,
+                        items: List.generate(rankingOptions.length, (index) {
+                          final rank = index + 1;
+                          final isUsed = currentRanking.values.contains(rank) && currentRanking[option] != rank;
+                          return DropdownMenuItem<int>(
+                            value: rank,
+                            enabled: !isUsed,
+                            child: Text(
+                              '$rank',
+                              style: TextStyle(
+                                color: isUsed ? Colors.grey : Color(0xFF0E6655),
+                                fontFamily: 'CenturyGothic',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }),
+                        onChanged: (int? newRank) {
+                          if (newRank != null) {
+                            setState(() {
+                              if (!_formResponses.containsKey(formId)) {
+                                _formResponses[formId] = {};
+                              }
+                              if (_formResponses[formId]![fieldId] == null) {
+                                _formResponses[formId]![fieldId] = <String, int>{};
+                              }
+                              
+                              final ranking = _formResponses[formId]![fieldId] as Map<String, int>;
+                              
+                              // Supprimer l'ancien rang s'il existe
+                              if (ranking[option] != null) {
+                                ranking.remove(option);
+                              }
+                              
+                              // Supprimer le rang s'il est utilisé par une autre option
+                              ranking.removeWhere((key, value) => value == newRank);
+                              
+                              // Assigner le nouveau rang
+                              ranking[option] = newRank;
+                            });
+                          }
+                        },
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: currentRank != null ? Colors.white : Colors.grey[600],
+                        ),
+                        style: TextStyle(
+                          color: currentRank != null ? Colors.white : Color(0xFF0E6655),
+                          fontSize: 14,
+                          fontFamily: 'CenturyGothic',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
         );
 
       case 'date':
