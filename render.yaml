@@ -3,8 +3,10 @@ services:
     name: evenvo-mobile-web-premium
     repo: https://github.com/EvSol28/Evenvo-Mobile-Web-Premium
     branch: main
-    buildCommand: flutter build web --release
+    buildCommand: flutter build web --release --no-tree-shake-icons
     publishDir: build/web
     envVars:
       - key: FLUTTER_WEB
         value: true
+      - key: FORCE_REBUILD
+        value: "2025-12-30-16:30"
