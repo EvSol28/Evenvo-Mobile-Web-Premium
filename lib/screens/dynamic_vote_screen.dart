@@ -264,25 +264,6 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Message de confirmation que le ranking fonctionne
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(12),
-            margin: EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Color(0xFF4CAF50),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '✅ Ranking activé ! Version 2025-12-30-15:47',
-              style: TextStyle(
-                fontFamily: 'CenturyGothic',
-                fontSize: 12,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
           // Description du champ si disponible
           if (field != null && field['description'] != null && field['description'].isNotEmpty) ...[
             Container(
@@ -385,12 +366,16 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                         return DropdownMenuItem<int>(
                           value: rank,
                           enabled: !isUsed,
-                          child: Text(
-                            '$rank',
-                            style: TextStyle(
-                              color: isUsed ? Colors.grey : Color(0xFF0E6655),
-                              fontFamily: 'CenturyGothic',
-                              fontWeight: FontWeight.w600,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            child: Text(
+                              '$rank',
+                              style: TextStyle(
+                                color: isUsed ? Colors.grey[400] : Colors.black87,
+                                fontFamily: 'CenturyGothic',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                         );
