@@ -246,7 +246,11 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
     print('🔍 Options: $options');
     print('🔍 Field data: $field');
     
-    switch (type) {
+    // Normaliser le type en minuscules pour éviter les problèmes de casse
+    final normalizedType = type.toLowerCase().trim();
+    print('🔍 Type normalisé: $normalizedType');
+    
+    switch (normalizedType) {
       case 'text':
         return TextFormField(
           decoration: InputDecoration(
@@ -674,7 +678,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         );
 
       default:
-        return Text('Type de champ non supporté: $type');
+        return Text('Type de champ non supporté: $normalizedType (original: $type)');
     }
   }
 
