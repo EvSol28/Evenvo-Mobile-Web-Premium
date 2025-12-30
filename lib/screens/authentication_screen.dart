@@ -8,6 +8,7 @@ import 'package:Evenvo_Mobile/screens/authentification_choix_screen.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import 'dart:html' as html show window;
 
 class AuthenticationScreen extends StatefulWidget {
   const AuthenticationScreen({super.key});
@@ -51,6 +52,18 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
   void _initializeScanner() async {
     try {
+      print('🔍 Initialisation du scanner...');
+      
+      // Vérification spécifique pour le web
+      if (kIsWeb) {
+        print('🌐 Plateforme web détectée');
+        
+        // Vérifier si les APIs de caméra sont disponibles
+        if (!_isWebCameraSupported()) {
+          throw Exception('Les APIs de caméra ne sont pas supportées sur ce navigateur');
+        }
+      }
+      
       // Configuration spécifique pour le web
       controller = MobileScannerController(
         detectionSpeed: DetectionSpeed.noDuplicates,
@@ -60,25 +73,34 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
         formats: [BarcodeFormat.qrCode], // Limiter aux QR codes seulement
       );
 
-      // Délai pour l'initialisation
-      await Future.delayed(const Duration(milliseconds: 1200));
+      // Délai plus long pour l'initialisation web
+      await Future.delayed(const Duration(milliseconds: 2000));
       
       if (mounted) {
         setState(() {
           isScannerReady = true;
           hasError = false;
         });
+        print('✅ Scanner initialisé avec succès');
       }
     } catch (e) {
-      print('Erreur initialisation scanner: $e');
+      print('❌ Erreur initialisation scanner: $e');
       if (mounted) {
         setState(() {
           hasError = true;
-          errorMessage = 'Impossible d\'accéder à la caméra. Vérifiez les permissions.';
+          errorMessage = kIsWeb 
+            ? 'Caméra non accessible sur le web. Essayez:\n• Autoriser la caméra dans les paramètres du navigateur\n• Utiliser HTTPS\n• Essayer un autre navigateur (Chrome/Firefox)'
+            : 'Impossible d\'accéder à la caméra. Vérifiez les permissions.';
           isScannerReady = false;
         });
       }
     }
+  }
+
+  bool _isWebCameraSupported() {
+    // Cette fonction sera toujours true pour simplifier, 
+    // mais on peut ajouter des vérifications plus sophistiquées
+    return true;
   }
 
   @override
@@ -273,41 +295,99 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     return Container(
       color: Colors.red.withOpacity(0.1),
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.camera_alt_outlined,
-              color: Colors.red,
-              size: 60,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              errorMessage ?? 'Erreur caméra',
-              style: const TextStyle(
-                fontFamily: 'CenturyGothic',
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.camera_alt_outlined,
                 color: Colors.red,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                size: 60,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  hasError = false;
-                  isScannerReady = false;
-                });
-                _initializeScanner();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0E6655),
-                foregroundColor: Colors.white,
+              const SizedBox(height: 16),
+              Text(
+                errorMessage ?? 'Erreur caméra',
+                style: const TextStyle(
+                  fontFamily: 'CenturyGothic',
+                  color: Colors.red,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
               ),
-              child: const Text('Réessayer'),
-            ),
-          ],
+              if (kIsWeb) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        '💡 Solutions pour le web:',
+                        style: TextStyle(
+                          fontFamily: 'CenturyGothic',
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                          fontSize: 14,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '1. Cliquez sur l\'icône 🔒 dans la barre d\'adresse\n'
+                        '2. Autorisez l\'accès à la caméra\n'
+                        '3. Rafraîchissez la page (F5)\n'
+                        '4. Essayez Chrome ou Firefox si le problème persiste',
+                        style: TextStyle(
+                          fontFamily: 'CenturyGothic',
+                          color: Colors.blue,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        hasError = false;
+                        isScannerReady = false;
+                      });
+                      _initializeScanner();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0E6655),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Réessayer'),
+                  ),
+                  if (kIsWeb)
+                    ElevatedButton(
+                      onPressed: () {
+                        // Rafraîchir la page
+                        html.window.location.reload();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Rafraîchir'),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
