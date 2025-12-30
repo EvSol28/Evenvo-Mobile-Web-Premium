@@ -176,6 +176,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
           'formId': formId,
           'userId': widget.userId,
           'responses': formResponses,
+          'allowUpdate': true, // Permettre la mise à jour
         }),
       );
 
@@ -320,12 +321,22 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
               margin: EdgeInsets.only(bottom: 12),
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: currentRank != null ? Color(0xFF0E6655).withOpacity(0.1) : Colors.white,
+                color: currentRank != null 
+                    ? Color(0xFF0E6655).withOpacity(0.15) 
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: currentRank != null ? Color(0xFF0E6655) : Colors.grey[300]!,
                   width: currentRank != null ? 2 : 1,
                 ),
+                // Effet glass pour les éléments sélectionnés
+                boxShadow: currentRank != null ? [
+                  BoxShadow(
+                    color: Color(0xFF0E6655).withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ] : null,
               ),
               child: Row(
                 children: [
@@ -345,8 +356,18 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: currentRank != null ? Color(0xFF0E6655) : Colors.grey[200],
+                      color: currentRank != null 
+                          ? Color(0xFF0E6655).withOpacity(0.15) 
+                          : Colors.grey[200],
                       borderRadius: BorderRadius.circular(20),
+                      // Effet glass pour le dropdown sélectionné
+                      boxShadow: currentRank != null ? [
+                        BoxShadow(
+                          color: Color(0xFF0E6655).withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: Offset(0, 1),
+                        ),
+                      ] : null,
                     ),
                     child: DropdownButton<int>(
                       value: currentRank,
@@ -407,10 +428,10 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                       },
                       icon: Icon(
                         Icons.arrow_drop_down,
-                        color: currentRank != null ? Colors.white : Colors.grey[600],
+                        color: currentRank != null ? Color(0xFF0E6655) : Colors.grey[600],
                       ),
                       style: TextStyle(
-                        color: currentRank != null ? Colors.white : Color(0xFF0E6655),
+                        color: currentRank != null ? Color(0xFF0E6655) : Colors.grey[600],
                         fontSize: 14,
                         fontFamily: 'CenturyGothic',
                         fontWeight: FontWeight.w600,
@@ -1235,10 +1256,24 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                             ? () => _submitVote(form['id'], _formResponses[form['id']] ?? {})
                             : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: hasVoted ? Colors.orange : Color(0xFF0E6655),
+                          backgroundColor: hasVoted 
+                              ? Colors.orange.withOpacity(0.15) 
+                              : Color(0xFF0E6655).withOpacity(0.15),
+                          foregroundColor: hasVoted ? Colors.orange : Color(0xFF0E6655),
                           padding: EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
+                            side: BorderSide(
+                              color: hasVoted ? Colors.orange : Color(0xFF0E6655),
+                              width: 2,
+                            ),
+                          ),
+                          // Effet glass
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                        ).copyWith(
+                          overlayColor: MaterialStateProperty.all(
+                            (hasVoted ? Colors.orange : Color(0xFF0E6655)).withOpacity(0.1),
                           ),
                         ),
                         child: Text(
@@ -1249,7 +1284,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                             fontFamily: 'CenturyGothic',
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: hasVoted ? Colors.orange : Color(0xFF0E6655),
                           ),
                         ),
                       ),
