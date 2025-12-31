@@ -814,36 +814,43 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                 ),
               ),
               SizedBox(height: 8),
-              TextField(
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Laissez un commentaire sur votre évaluation...',
-                  hintStyle: TextStyle(
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Color(0xFF0E6655).withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xFF0E6655).withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Laissez un commentaire sur votre évaluation...',
+                    hintStyle: TextStyle(
+                      fontFamily: 'CenturyGothic',
+                      color: Colors.grey[500],
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(12),
+                  ),
+                  style: TextStyle(
                     fontFamily: 'CenturyGothic',
-                    color: Colors.grey[500],
+                    fontSize: 14,
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Color(0xFF0E6655).withOpacity(0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Color(0xFF0E6655), width: 2),
-                  ),
-                  contentPadding: EdgeInsets.all(12),
+                  onChanged: (value) {
+                    setState(() {
+                      if (!_formResponses.containsKey(formId)) {
+                        _formResponses[formId] = {};
+                      }
+                      _formResponses[formId]!['${fieldId}_comment'] = value;
+                    });
+                  },
                 ),
-                style: TextStyle(
-                  fontFamily: 'CenturyGothic',
-                  fontSize: 14,
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    if (!_formResponses.containsKey(formId)) {
-                      _formResponses[formId] = {};
-                    }
-                    _formResponses[formId]!['${fieldId}_comment'] = value;
-                  });
-                },
               ),
             ],
           ],
