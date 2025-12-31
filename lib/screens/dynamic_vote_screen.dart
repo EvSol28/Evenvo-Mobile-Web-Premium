@@ -777,6 +777,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         );
 
       case 'rating':
+        // Debug: log field data to see if allowComments is present
+        print('🔍 DEBUG Rating field data: $field');
+        
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
