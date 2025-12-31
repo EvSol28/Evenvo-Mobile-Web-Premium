@@ -777,26 +777,76 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         );
 
       case 'rating':
-        return Row(
-          children: List.generate(5, (index) {
-            final rating = index + 1;
-            final currentRating = _formResponses[formId]?[fieldId] as int? ?? 0;
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (!_formResponses.containsKey(formId)) {
-                    _formResponses[formId] = {};
-                  }
-                  _formResponses[formId]![fieldId] = rating;
-                });
-              },
-              child: Icon(
-                Icons.star,
-                size: 40,
-                color: rating <= currentRating ? Colors.amber : Colors.grey[300],
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: List.generate(5, (index) {
+                final rating = index + 1;
+                final currentRating = _formResponses[formId]?[fieldId] as int? ?? 0;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (!_formResponses.containsKey(formId)) {
+                        _formResponses[formId] = {};
+                      }
+                      _formResponses[formId]![fieldId] = rating;
+                    });
+                  },
+                  child: Icon(
+                    Icons.star,
+                    size: 40,
+                    color: rating <= currentRating ? Colors.amber : Colors.grey[300],
+                  ),
+                );
+              }),
+            ),
+            // Add comment field if allowComments is true
+            if (field != null && field['allowComments'] == true) ...[
+              SizedBox(height: 16),
+              Text(
+                'Commentaire (facultatif)',
+                style: TextStyle(
+                  fontFamily: 'CenturyGothic',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0E6655),
+                ),
               ),
-            );
-          }),
+              SizedBox(height: 8),
+              TextField(
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Laissez un commentaire sur votre évaluation...',
+                  hintStyle: TextStyle(
+                    fontFamily: 'CenturyGothic',
+                    color: Colors.grey[500],
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Color(0xFF0E6655).withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Color(0xFF0E6655), width: 2),
+                  ),
+                  contentPadding: EdgeInsets.all(12),
+                ),
+                style: TextStyle(
+                  fontFamily: 'CenturyGothic',
+                  fontSize: 14,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    if (!_formResponses.containsKey(formId)) {
+                      _formResponses[formId] = {};
+                    }
+                    _formResponses[formId]!['${fieldId}_comment'] = value;
+                  });
+                },
+              ),
+            ],
+          ],
         );
 
       case 'syndical':
