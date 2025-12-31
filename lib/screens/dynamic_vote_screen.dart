@@ -55,18 +55,20 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
       print('🔍 Chargement des formulaires pour eventId: ${widget.eventId}');
       print('🌐 Environnement: ${ApiConfig.environment}');
       print('🌐 URL du serveur: ${ApiConfig.baseUrl}');
+      print('🌐 URL complète: ${ApiConfig.activeVoteForms(widget.eventId)}');
       
       // Essayer d'abord avec l'ID tel quel
       var response = await http.get(
         Uri.parse(ApiConfig.activeVoteForms(widget.eventId)),
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(Duration(seconds: 10)); // Ajouter un timeout
 
       print('📡 Réponse serveur (${widget.eventId}): ${response.statusCode}');
       
       // Si pas de résultats, essayer avec la première lettre en majuscule
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('📄 Données reçues: $data');
         if (data['success'] && data['voteForms'].isEmpty) {
           final capitalizedEventId = widget.eventId.replaceFirst(widget.eventId[0], widget.eventId[0].toUpperCase());
           print('🔄 Tentative avec ID capitalisé: $capitalizedEventId');
@@ -74,7 +76,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
           response = await http.get(
             Uri.parse(ApiConfig.activeVoteForms(capitalizedEventId)),
             headers: {'Content-Type': 'application/json'},
-          );
+          ).timeout(Duration(seconds: 10));
           print('📡 Réponse serveur ($capitalizedEventId): ${response.statusCode}');
         }
       }
@@ -88,6 +90,17 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             _voteForms = List<Map<String, dynamic>>.from(data['voteForms']);
             _isLoading = false;
           });
+          
+          print('✅ Formulaires chargés: ${_voteForms.length}');
+          // Log each form's fields for debugging
+          for (var form in _voteForms) {
+            print('📋 Formulaire: ${form['name']}');
+            if (form['fields'] != null) {
+              for (var field in form['fields']) {
+                print('  🔸 Champ: ${field['type']} - ${field['label']} - allowComments: ${field['allowComments']}');
+              }
+            }
+          }
           
           // Check vote status for each form
           await _checkVoteStatus();
