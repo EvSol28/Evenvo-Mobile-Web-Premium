@@ -246,9 +246,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
     // Normaliser le type en minuscules pour éviter les problèmes de casse
     final normalizedType = type.toLowerCase().trim();
     
-    // FORCE RANKING SUPPORT - Version temporaire pour debug
     if (normalizedType == 'ranking') {
-      print('🎯 RANKING DÉTECTÉ - Création du widget');
       // Créer une liste ordonnée des options pour le classement
       final List<String> rankingOptions = List<String>.from(options ?? []);
       final Map<String, int> currentRanking = Map<String, int>.from(
