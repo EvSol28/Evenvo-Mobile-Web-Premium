@@ -61,7 +61,13 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
       var response = await http.get(
         Uri.parse(ApiConfig.activeVoteForms(widget.eventId)),
         headers: {'Content-Type': 'application/json'},
-      ).timeout(Duration(seconds: 10)); // Ajouter un timeout
+      ).timeout(
+        Duration(seconds: 30), // Augmenter le timeout
+        onTimeout: () {
+          print('❌ Timeout lors de la requête');
+          throw Exception('Timeout de la requête');
+        },
+      );
 
       print('📡 Réponse serveur (${widget.eventId}): ${response.statusCode}');
       
@@ -76,7 +82,13 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
           response = await http.get(
             Uri.parse(ApiConfig.activeVoteForms(capitalizedEventId)),
             headers: {'Content-Type': 'application/json'},
-          ).timeout(Duration(seconds: 10));
+          ).timeout(
+            Duration(seconds: 30),
+            onTimeout: () {
+              print('❌ Timeout lors de la requête (capitalisé)');
+              throw Exception('Timeout de la requête');
+            },
+          );
           print('📡 Réponse serveur ($capitalizedEventId): ${response.statusCode}');
         }
       }
@@ -819,10 +831,10 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                 );
               }),
             ),
-            // TEMPORAIRE: Toujours afficher le champ de commentaire pour tester
+            // FORCER l'affichage du champ de commentaire pour tous les champs rating
             SizedBox(height: 16),
             Text(
-              'Commentaire (facultatif) - TEST',
+              'Commentaire (facultatif)',
               style: TextStyle(
                 fontFamily: 'CenturyGothic',
                 fontSize: 14,
@@ -869,20 +881,12 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                 },
               ),
             ),
-            // Condition originale pour debug
-            if (field != null && field['allowComments'] == true) ...[
-              SizedBox(height: 8),
-              Text(
-                'DEBUG: allowComments est TRUE',
-                style: TextStyle(color: Colors.green, fontSize: 12),
-              ),
-            ] else ...[
-              SizedBox(height: 8),
-              Text(
-                'DEBUG: allowComments est ${field?['allowComments']} (${field?['allowComments'].runtimeType})',
-                style: TextStyle(color: Colors.red, fontSize: 12),
-              ),
-            ],
+            // Debug info
+            SizedBox(height: 8),
+            Text(
+              'DEBUG: allowComments = ${field?['allowComments']} (${field?['allowComments'].runtimeType})',
+              style: TextStyle(color: Colors.blue, fontSize: 10),
+            ),
           ],
         );
 

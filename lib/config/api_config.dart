@@ -2,12 +2,12 @@ import 'package:flutter/foundation.dart';
 
 class ApiConfig {
   static String get baseUrl {
-    // Utiliser le serveur local pour les tests de développement
-    return 'http://localhost:4001';
+    // Utiliser le serveur de production
+    return 'https://evenvo-demo-premium.onrender.com';
   }
   
   static String get environment {
-    return 'development';
+    return 'production';
   }
   
   // URLs des endpoints
