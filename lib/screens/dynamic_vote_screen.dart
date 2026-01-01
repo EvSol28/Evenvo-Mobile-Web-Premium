@@ -32,6 +32,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   Map<String, bool> _voteStatus = {}; // Track which forms have been voted on
   String? _selectedFormId; // Track which form is currently being voted on
   Map<String, Map<String, dynamic>> _formResponses = {}; // Store form responses
+  Map<String, TextEditingController> _commentControllers = {}; // Controllers for comment fields
 
   @override
   void initState() {
@@ -46,6 +47,8 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   @override
   void dispose() {
     _backgroundController.dispose();
+    // Dispose all comment controllers
+    _commentControllers.values.forEach((controller) => controller.dispose());
     super.dispose();
   }
 
@@ -147,7 +150,36 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
       if (!_formResponses.containsKey(formId)) {
         _formResponses[formId] = {};
       }
+      // Initialize comment controllers for this form
+      _initializeCommentControllers(formId);
     });
+  }
+
+  void _initializeCommentControllers(String formId) {
+    final form = _voteForms.firstWhere((f) => f['id'] == formId);
+    final fields = form['fields'] as List<dynamic>? ?? [];
+    
+    for (var field in fields) {
+      if (field['type'] == 'rating' && field['allowComments'] == true) {
+        final fieldId = field['id'];
+        final commentKey = '${fieldId}_comment';
+        final controllerKey = '${formId}_${commentKey}';
+        
+        if (!_commentControllers.containsKey(controllerKey)) {
+          _commentControllers[controllerKey] = TextEditingController(
+            text: _formResponses[formId]?[commentKey]?.toString() ?? ''
+          );
+          
+          // Add listener to update form responses without setState
+          _commentControllers[controllerKey]!.addListener(() {
+            if (!_formResponses.containsKey(formId)) {
+              _formResponses[formId] = {};
+            }
+            _formResponses[formId]![commentKey] = _commentControllers[controllerKey]!.text;
+          });
+        }
+      }
+    }
   }
 
   void _goBackToFormList() {
@@ -818,8 +850,8 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                   ],
                 ),
                 child: TextFormField(
+                  controller: _commentControllers['${formId}_${fieldId}_comment'],
                   maxLines: 3,
-                  initialValue: _formResponses[formId]?['${fieldId}_comment']?.toString() ?? '',
                   decoration: InputDecoration(
                     hintText: 'Laissez un commentaire sur votre évaluation...',
                     hintStyle: TextStyle(
@@ -833,14 +865,6 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                     fontFamily: 'CenturyGothic',
                     fontSize: 14,
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      if (!_formResponses.containsKey(formId)) {
-                        _formResponses[formId] = {};
-                      }
-                      _formResponses[formId]!['${fieldId}_comment'] = value;
-                    });
-                  },
                 ),
               ),
             ],
@@ -1357,7 +1381,19 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] && data['hasVoted']) {
-          return Map<String, dynamic>.from(data['responses']);
+          final responses = Map<String, dynamic>.from(data['responses']);
+          
+          // Update comment controllers with existing data
+          responses.forEach((key, value) {
+            if (key.endsWith('_comment')) {
+              final controllerKey = '${formId}_${key}';
+              if (_commentControllers.containsKey(controllerKey)) {
+                _commentControllers[controllerKey]!.text = value?.toString() ?? '';
+              }
+            }
+          });
+          
+          return responses;
         }
       }
     } catch (e) {
