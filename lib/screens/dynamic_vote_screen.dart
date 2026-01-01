@@ -802,7 +802,8 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         );
 
       case 'rating':
-        // Debug: log field data to see if allowComments is present
+        // FORCE LOG - Version modifiée 2026-01-01
+        print('🚨🚨🚨 RATING FIELD DETECTED - VERSION MODIFIEE 2026-01-01 🚨🚨🚨');
         print('🔍 DEBUG Rating field data: $field');
         print('🔍 DEBUG allowComments value: ${field?['allowComments']}');
         print('🔍 DEBUG allowComments type: ${field?['allowComments'].runtimeType}');
@@ -810,23 +811,22 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // INDICATEUR VISUEL TRÈS VISIBLE
+            // Indicateur visuel que le code modifié est utilisé
             Container(
-              width: double.infinity,
               padding: EdgeInsets.all(8),
               margin: EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.red.withOpacity(0.1),
+                border: Border.all(color: Colors.red),
+                borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                '🔥 CODE MODIFIÉ ACTIF - VERSION 2027 🔥',
+                '🚨 CODE MODIFIÉ - VERSION 2026-01-01 🚨',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Colors.red,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
             Row(
@@ -902,16 +902,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             ),
             // Debug info
             SizedBox(height: 8),
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'DEBUG: allowComments = ${field?['allowComments']} (${field?['allowComments'].runtimeType})',
-                style: TextStyle(color: Colors.blue, fontSize: 10),
-              ),
+            Text(
+              'DEBUG: allowComments = ${field?['allowComments']} (${field?['allowComments'].runtimeType})',
+              style: TextStyle(color: Colors.blue, fontSize: 10),
             ),
           ],
         );
