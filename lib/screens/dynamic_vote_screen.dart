@@ -810,6 +810,25 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // INDICATEUR VISUEL TRÈS VISIBLE
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(8),
+              margin: EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '🔥 CODE MODIFIÉ ACTIF - VERSION 2027 🔥',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
             Row(
               children: List.generate(5, (index) {
                 final rating = index + 1;
@@ -883,9 +902,16 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             ),
             // Debug info
             SizedBox(height: 8),
-            Text(
-              'DEBUG: allowComments = ${field?['allowComments']} (${field?['allowComments'].runtimeType})',
-              style: TextStyle(color: Colors.blue, fontSize: 10),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'DEBUG: allowComments = ${field?['allowComments']} (${field?['allowComments'].runtimeType})',
+                style: TextStyle(color: Colors.blue, fontSize: 10),
+              ),
             ),
           ],
         );
