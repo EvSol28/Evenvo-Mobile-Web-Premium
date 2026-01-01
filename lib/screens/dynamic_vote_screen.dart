@@ -770,7 +770,13 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         );
 
       case 'rating':
-        print('🎯 RATING DÉTECTÉ - VERSION 2.0.0 - allowComments: ${field?['allowComments']}');
+        print('🎯 RATING DÉTECTÉ - VERSION 2.0.0');
+        print('🔍 Field data: $field');
+        print('🔍 allowComments value: ${field?['allowComments']}');
+        print('🔍 allowComments type: ${field?['allowComments'].runtimeType}');
+        print('🔍 allowComments == true: ${field?['allowComments'] == true}');
+        print('🔍 allowComments toString: ${field?['allowComments'].toString()}');
+        
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -795,59 +801,70 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                 );
               }),
             ),
-            // Add comment field if allowComments is true
-            if (field != null && field['allowComments'] == true) ...[
-              SizedBox(height: 16),
-              Text(
-                'Commentaire (facultatif)',
+            // FORCER l'affichage du champ de commentaire pour debug
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.yellow.withOpacity(0.3),
+                border: Border.all(color: Colors.orange),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'DEBUG: allowComments = ${field?['allowComments']} (${field?['allowComments'].runtimeType})',
+                style: TextStyle(fontSize: 10),
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Commentaire (facultatif)',
+              style: TextStyle(
+                fontFamily: 'CenturyGothic',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0E6655),
+              ),
+            ),
+            SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Color(0xFF0E6655).withOpacity(0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF0E6655).withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextFormField(
+                maxLines: 3,
+                initialValue: _formResponses[formId]?['${fieldId}_comment']?.toString() ?? '',
+                decoration: InputDecoration(
+                  hintText: 'Laissez un commentaire sur votre évaluation...',
+                  hintStyle: TextStyle(
+                    fontFamily: 'CenturyGothic',
+                    color: Colors.grey[500],
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(12),
+                ),
                 style: TextStyle(
                   fontFamily: 'CenturyGothic',
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF0E6655),
                 ),
+                onChanged: (value) {
+                  setState(() {
+                    if (!_formResponses.containsKey(formId)) {
+                      _formResponses[formId] = {};
+                    }
+                    _formResponses[formId]!['${fieldId}_comment'] = value;
+                  });
+                },
               ),
-              SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Color(0xFF0E6655).withOpacity(0.3)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xFF0E6655).withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextFormField(
-                  maxLines: 3,
-                  initialValue: _formResponses[formId]?['${fieldId}_comment']?.toString() ?? '',
-                  decoration: InputDecoration(
-                    hintText: 'Laissez un commentaire sur votre évaluation...',
-                    hintStyle: TextStyle(
-                      fontFamily: 'CenturyGothic',
-                      color: Colors.grey[500],
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(12),
-                  ),
-                  style: TextStyle(
-                    fontFamily: 'CenturyGothic',
-                    fontSize: 14,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      if (!_formResponses.containsKey(formId)) {
-                        _formResponses[formId] = {};
-                      }
-                      _formResponses[formId]!['${fieldId}_comment'] = value;
-                    });
-                  },
-                ),
-              ),
-            ],
+            ),
           ],
         );
 
