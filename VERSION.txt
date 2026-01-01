@@ -1,0 +1,7 @@
+Version: 2.0.0
+Date: 2026-01-01 19:00
+Modifications:
+- Ajout du champ de commentaire pour les évaluations
+- Suppression de tous les messages de debug
+- Correction du champ de commentaire éditable
+- Interface propre et prête pour la production

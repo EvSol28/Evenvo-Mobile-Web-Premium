@@ -9,4 +9,6 @@ services:
       - key: FLUTTER_WEB
         value: true
       - key: FORCE_REBUILD
-        value: "2026-01-01-15:40"
+        value: "2026-01-01-19:00"
+      - key: VERSION
+        value: "2.0.0"
