@@ -62,10 +62,10 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         Uri.parse(ApiConfig.activeVoteForms(widget.eventId)),
         headers: {'Content-Type': 'application/json'},
       ).timeout(
-        Duration(seconds: 30), // Augmenter le timeout
+        Duration(seconds: 60), // Augmenter le timeout à 60 secondes
         onTimeout: () {
-          print('❌ Timeout lors de la requête');
-          throw Exception('Timeout de la requête');
+          print('❌ Timeout lors de la requête après 60 secondes');
+          throw Exception('Timeout de la requête - Le serveur met trop de temps à répondre');
         },
       );
 
@@ -83,10 +83,10 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             Uri.parse(ApiConfig.activeVoteForms(capitalizedEventId)),
             headers: {'Content-Type': 'application/json'},
           ).timeout(
-            Duration(seconds: 30),
+            Duration(seconds: 60), // Même timeout pour la deuxième tentative
             onTimeout: () {
-              print('❌ Timeout lors de la requête (capitalisé)');
-              throw Exception('Timeout de la requête');
+              print('❌ Timeout lors de la requête (capitalisé) après 60 secondes');
+              throw Exception('Timeout de la requête - Le serveur met trop de temps à répondre');
             },
           );
           print('📡 Réponse serveur ($capitalizedEventId): ${response.statusCode}');
