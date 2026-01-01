@@ -24,7 +24,7 @@ class DynamicVoteScreen extends StatefulWidget {
   _DynamicVoteScreenState createState() => _DynamicVoteScreenState();
 }
 
-// FORCE REBUILD - Version 2025-12-30-15:47
+// VERSION 2.0.0 - 2026-01-01-20:30 - CHAMP COMMENTAIRE FONCTIONNEL
 class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _voteForms = [];
   bool _isLoading = true;
@@ -37,6 +37,8 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+    // Log de version pour vérifier le déploiement
+    print('🚀 VERSION 2.0.0 - CHAMP COMMENTAIRE ACTIVÉ - 2026-01-01-20:30');
     _backgroundController = AnimationController(
       duration: const Duration(seconds: 20),
       vsync: this,
@@ -768,6 +770,7 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
         );
 
       case 'rating':
+        print('🎯 RATING DÉTECTÉ - VERSION 2.0.0 - allowComments: ${field?['allowComments']}');
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
