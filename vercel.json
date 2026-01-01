@@ -1,6 +1,6 @@
 {
   "buildCommand": "echo 'Using pre-built Flutter web files'",
-  "outputDirectory": "build/web",
+  "outputDirectory": "public",
   "installCommand": "echo 'No install needed - using pre-built files'",
   "framework": null,
   "functions": {},
