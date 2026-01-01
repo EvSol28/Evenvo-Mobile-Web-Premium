@@ -52,12 +52,8 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
   void _initializeScanner() async {
     try {
-      print('🔍 Initialisation du scanner...');
-      
       // Vérification spécifique pour le web
       if (kIsWeb) {
-        print('🌐 Plateforme web détectée');
-        
         // Vérifier si les APIs de caméra sont disponibles
         if (!_isWebCameraSupported()) {
           throw Exception('Les APIs de caméra ne sont pas supportées sur ce navigateur');
@@ -81,10 +77,8 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
           isScannerReady = true;
           hasError = false;
         });
-        print('✅ Scanner initialisé avec succès');
       }
     } catch (e) {
-      print('❌ Erreur initialisation scanner: $e');
       if (mounted) {
         setState(() {
           hasError = true;

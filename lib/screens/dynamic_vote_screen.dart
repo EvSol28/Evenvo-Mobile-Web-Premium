@@ -52,11 +52,6 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
 
   Future<void> _loadVoteForms() async {
     try {
-      print('🔍 Chargement des formulaires pour eventId: ${widget.eventId}');
-      print('🌐 Environnement: ${ApiConfig.environment}');
-      print('🌐 URL du serveur: ${ApiConfig.baseUrl}');
-      print('🌐 URL complète: ${ApiConfig.activeVoteForms(widget.eventId)}');
-      
       // Essayer d'abord avec l'ID tel quel
       var response = await http.get(
         Uri.parse(ApiConfig.activeVoteForms(widget.eventId)),
@@ -64,20 +59,15 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
       ).timeout(
         Duration(seconds: 60), // Augmenter le timeout à 60 secondes
         onTimeout: () {
-          print('❌ Timeout lors de la requête après 60 secondes');
           throw Exception('Timeout de la requête - Le serveur met trop de temps à répondre');
         },
       );
-
-      print('📡 Réponse serveur (${widget.eventId}): ${response.statusCode}');
       
       // Si pas de résultats, essayer avec la première lettre en majuscule
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('📄 Données reçues: $data');
         if (data['success'] && data['voteForms'].isEmpty) {
           final capitalizedEventId = widget.eventId.replaceFirst(widget.eventId[0], widget.eventId[0].toUpperCase());
-          print('🔄 Tentative avec ID capitalisé: $capitalizedEventId');
           
           response = await http.get(
             Uri.parse(ApiConfig.activeVoteForms(capitalizedEventId)),
@@ -85,15 +75,11 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
           ).timeout(
             Duration(seconds: 60), // Même timeout pour la deuxième tentative
             onTimeout: () {
-              print('❌ Timeout lors de la requête (capitalisé) après 60 secondes');
               throw Exception('Timeout de la requête - Le serveur met trop de temps à répondre');
             },
           );
-          print('📡 Réponse serveur ($capitalizedEventId): ${response.statusCode}');
         }
       }
-
-      print('📄 Corps de la réponse: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -102,17 +88,6 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
             _voteForms = List<Map<String, dynamic>>.from(data['voteForms']);
             _isLoading = false;
           });
-          
-          print('✅ Formulaires chargés: ${_voteForms.length}');
-          // Log each form's fields for debugging
-          for (var form in _voteForms) {
-            print('📋 Formulaire: ${form['name']}');
-            if (form['fields'] != null) {
-              for (var field in form['fields']) {
-                print('  🔸 Champ: ${field['type']} - ${field['label']} - allowComments: ${field['allowComments']}');
-              }
-            }
-          }
           
           // Check vote status for each form
           await _checkVoteStatus();
@@ -268,15 +243,8 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
   }
 
   Widget _buildFieldInput(String type, String fieldId, String formId, List<dynamic>? options, Map<String, dynamic>? field) {
-    // VERSION 2025-12-30-15:47 - NOUVELLE VERSION CHARGÉE
-    print('🚀 NOUVELLE VERSION CHARGÉE - 2025-12-30-15:47');
-    print('🔍 Type de champ reçu: $type');
-    print('🔍 Options: $options');
-    print('🔍 Field data: $field');
-    
     // Normaliser le type en minuscules pour éviter les problèmes de casse
     final normalizedType = type.toLowerCase().trim();
-    print('🔍 Type normalisé: $normalizedType');
     
     // FORCE RANKING SUPPORT - Version temporaire pour debug
     if (normalizedType == 'ranking') {
@@ -852,8 +820,9 @@ class _DynamicVoteScreenState extends State<DynamicVoteScreen> with TickerProvid
                     ),
                   ],
                 ),
-                child: TextField(
+                child: TextFormField(
                   maxLines: 3,
+                  initialValue: _formResponses[formId]?['${fieldId}_comment']?.toString() ?? '',
                   decoration: InputDecoration(
                     hintText: 'Laissez un commentaire sur votre évaluation...',
                     hintStyle: TextStyle(
